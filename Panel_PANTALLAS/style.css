@@ -17,8 +17,8 @@ body {
 .container {
     position: relative;
     width: 850px;
-    height: 340px;
-    background-color: #fff;
+    height: 400px;
+    background-color: #5A3620;
     border-radius: 30px;
     box-shadow: 0 0 30px rgba(0, 0,0, .2);
 }
@@ -32,6 +32,11 @@ body {
     display: flex;
     align-items: center;
     text-align: center;
+    padding: 40px;
+    z-index: 1;
+}
+.form-box.password{
+    visibility: hidden;
 }
 form{
     width: 100%;
@@ -44,6 +49,54 @@ form{
     position: relative;
     margin: 30px;
 }
+.input-box input, button{
+    width: 100%;
+    padding: 10px 47px 10px 17px;
+    border-radius: 8px;
+    border: none;
+    outline:none;
+    font-size: 15px;
+    font-weight: 500;
+    box-shadow: 0 0 20px rgba(0, 0,0, .2);
+    background: #eee;
+}
+.input-box i{
+    position: absolute;
+    right: 20px;
+    top:47%;
+    transform: translatey(-50%)
+}
 .text-white{
     color: #fff;
 }
+.btn{
+    padding: 10px;
+    cursor: pointer;
+}
+.btn:hover {
+    background-color: #3D1901;
+    color: #fff;
+}
+
+.toggle-box{
+    position: absolute;
+    height: 100%;
+    width: 100%;
+}
+.toggle-panel{
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    background: #eee;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.toggle-panel p{
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
