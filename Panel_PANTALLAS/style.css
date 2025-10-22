@@ -12,15 +12,19 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(10deg, #e2e2e2, #A4795C) ;
+    background: linear-gradient(10deg, #e2e2e2, #dfc7b7) ;
+}
+a {
+    text-decoration: none;
 }
 .container {
     position: relative;
     width: 850px;
     height: 400px;
-    background-color: #5A3620;
+    background-color: #1b2941;
     border-radius: 30px;
     box-shadow: 0 0 30px rgba(0, 0,0, .2);
+    /*overflow: hidden;*/
 }
 
 .form-box{
@@ -28,7 +32,7 @@ body {
     right: 0;
     width: 50%;
     height: 100%;
-    background: #5A3620;
+    background: ;
     display: flex;
     align-items: center;
     text-align: center;
@@ -58,7 +62,7 @@ form{
     font-size: 15px;
     font-weight: 500;
     box-shadow: 0 0 20px rgba(0, 0,0, .2);
-    background: #eee;
+    /*background: #eee;*/
 }
 .input-box i{
     position: absolute;
@@ -83,20 +87,36 @@ form{
     height: 100%;
     width: 100%;
 }
+.toggle-box::before{
+    content: '' ;
+    position: absolute;
+    left: -250%;
+    height: 100%;
+    width: 300%;
+    background: #eee;
+    border-radius: 150px;
+    z-index: 2;
+}
 .toggle-panel{
     position: absolute;
     width: 50%;
     height: 100%;
-    background: #eee;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    z-index: 2;
 }
 
 .toggle-panel p{
     margin-bottom: 10px;
     font-size: 13px;
     font-weight: 500;
+}
+.toggle-panel a{
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #757373;
 }
 
