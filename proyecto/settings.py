@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,6 +42,21 @@ INSTALLED_APPS = [
     'archivos',
 ]
 
+JAZZMIN_SETTINGS = {
+    "site_title": "MSJ Admin",
+    "site_header": "Panel Administrador",
+    "site_brand": "Panel Administrador",
+    "welcome_sign": "Iniciar sesión",
+
+    "icons":{
+        "auth": "fas fa-users-cog",
+        "clientes.cliente": "fas fa-user",
+        "clientes.documentoscliente": "fa-solid fa-file" , 
+        "archivos.documento": "fa-solid fa-file-lines" , 
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+    },
+}
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -108,7 +124,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es'
 
 TIME_ZONE = 'UTC'
 
