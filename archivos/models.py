@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 class Documento(models.Model):
     id = models.BigAutoField(primary_key=True)
-    created_at = models.DateTimeField()
+    fecha_registro = models.DateTimeField()
     tipo_documento = models.CharField(db_column='Tipo_Documento', max_length=100)
     descripcion = models.CharField(db_column='Descripcion', max_length=255)
 
