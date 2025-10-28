@@ -1,11 +1,27 @@
 from django.contrib import admin, messages
 from .models import Documento
+from django import forms
+
+class DocumentoForm(forms.ModelForm):
+    class Meta:
+        model = Documento
+        fields = '__all__'
+        widgets = {
+            'tipo_documento': forms.TextInput(attrs={
+                'onkeypress': "return /[a-zA-Z\s]/.test(event.key);",
+                'placeholder': 'Solo letras (sin números)'
+            })
+        }
+
+
 
 @admin.register(Documento)
 class DocumentoAdmin(admin.ModelAdmin):
+    form = DocumentoForm
     search_fields = ('id', 'tipo_documento')
     list_display = ('id', 'tipo_documento', 'descripcion')
     list_display_links = ('tipo_documento',)
+    readonly_fields = ('fecha_registro',)
 
     def save_model(self, request, obj, form, change):
         # Verifica duplicado antes de guardar
