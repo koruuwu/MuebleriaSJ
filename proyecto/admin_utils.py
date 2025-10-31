@@ -1,16 +1,5 @@
 # proyecto/admin_utils.py
 
-# proyecto/admin.py
-
-from django.contrib import admin
-from django.utils.translation import gettext_lazy as _
-
-from django.contrib.admin import helpers
-
-class CustomAdminForm(helpers.AdminForm):
-    def __init__(self, form, fieldsets, prepopulated_fields, model_admin):
-        super().__init__(form, fieldsets, prepopulated_fields, model_admin)
-        self.error_text = _("Por favor, corrija los errores a continuación.")
 
 class PaginacionAdminMixin:
 

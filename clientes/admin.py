@@ -39,18 +39,7 @@ class ClienteForm(ValidacionesBaseForm):
             'telefono': WidgetsRegulares.telefono(),
             'direccion': WidgetsRegulares.direccion(),
         }
-    def full_clean(self):
-        """
-        Sobrescribe full_clean para manejar el mensaje genérico en español
-        """
-        try:
-            return super().full_clean()
-        except ValidationError as e:
-            # Si es un error de formulario completo, personalizar el mensaje
-            if not hasattr(e, 'error_dict') and hasattr(e, 'message'):
-                if e.message == "Please correct the errors below.":
-                    raise ValidationError("Por favor, corrija los errores a continuación.")
-            raise e
+    
         
 class DocumentosClienteInline(admin.TabularInline):
     model = DocumentosCliente
