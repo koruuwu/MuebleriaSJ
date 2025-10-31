@@ -1,8 +1,7 @@
 from django.db import models
 from archivos.models import *
-
 from django.core.exceptions import ValidationError
-# Create your models here.
+
 class Cliente(models.Model):
     id = models.BigAutoField(primary_key=True)
     creado = models.DateTimeField(auto_now_add=True)
@@ -18,6 +17,7 @@ class Cliente(models.Model):
     class Meta:
         managed = False
         db_table = 'Clientes'
+
 
 
 
@@ -45,8 +45,9 @@ class DocumentosCliente(models.Model):
             if existe:
                 raise ValidationError(
                     f"⚠️ El usuario {self.id_cliente.nombre} ya tiene registrado el documento "
-                    f"'{self.id_documento.tipo_documento}' con valor {self.valor}."
+                    f"'{self.id_documento.tipo_documento}'"
                 )
+            
 
     def save(self, *args, **kwargs):
         # Asegura que la validación se ejecute también al guardar desde admin
