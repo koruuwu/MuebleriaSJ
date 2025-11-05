@@ -45,19 +45,9 @@ class DocumentosClienteInline(admin.TabularInline):
     model = DocumentosCliente
     form = DocumentosClienteForm
     extra = 0  # no muestres filas vacías adicionales 
-    can_delete = False  # opcionalÑ
-    
+    can_delete = False  # No permite eliminar desde el inline
     def has_add_permission(self, request, obj=None):
-        # Solo permite agregar si el cliente ya está guardado
-        return obj is not None
-
-    def has_change_permission(self, request, obj=None):
-        # Solo permite editar si el cliente ya está guardado
-        return obj is not None
-
-    def has_delete_permission(self, request, obj=None):
-        # Solo permite eliminar si el cliente ya está guardado
-        return obj is not None
+        return obj is not None  # Solo agregar si el cliente ya existe
 
 
 @admin.register(Cliente)
@@ -67,7 +57,7 @@ class ClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     list_display = ('id','nombre','telefono','direccion')
     list_display_links = ('nombre',)
     list_filter = ('usuario_final',)
-    inlines = []
+    inlines = [DocumentosClienteInline]
    
 
 
