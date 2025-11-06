@@ -66,6 +66,7 @@ class ClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
 class DocumentosClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     form = DocumentosClienteForm
     search_fields=('valor','id','id_cliente__nombre')#importante guion bajo para especificar que elemento de lleve foranea
+    #solo en search fields y list filtrer
     list_display=('id_cliente', 'id_documento','valor')
     list_display_links=('valor',)
     list_filter=('id_documento','id_cliente')

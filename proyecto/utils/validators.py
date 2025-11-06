@@ -72,6 +72,7 @@ class ValidacionesBaseForm(forms.ModelForm):
         telefono = self.validar_numero_inicio(telefono, "El teléfono", ['2','3','7','8','9'])
         return telefono
 
+
     # ------------------- MÉTODOS ADICIONALES -------------------
-    # Puedes agregar aquí otros métodos de validación comunes
+    # otros métodos de validación comunes
     # como validar emails, números de documentos, etc.

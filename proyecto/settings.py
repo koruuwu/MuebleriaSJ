@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'clientes',
     'archivos',
-    'Muebles',
+    'Materiales',
 ]
 
 JAZZMIN_SETTINGS = {
@@ -41,6 +41,7 @@ JAZZMIN_SETTINGS = {
     
     # Configuraciones adicionales para forzar español
     "show_ui_builder": False,
+    "related_modal_active": True,
     
     "icons": {
         "auth": "fas fa-users-cog",
@@ -50,6 +51,8 @@ JAZZMIN_SETTINGS = {
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
     },
+    "order_with_respect_to": ["Materiales.Materiale", "Materiales.CategoriasMateriale"],
+
 }
 
 MIDDLEWARE = [
@@ -136,3 +139,5 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+if DEBUG:#importante para los iframes
+    X_FRAME_OPTIONS = 'ALLOWALL'

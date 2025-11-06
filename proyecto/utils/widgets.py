@@ -49,3 +49,57 @@ class WidgetsRegulares:
             """,
             'placeholder': placeholder,
         })
+
+
+    @staticmethod
+    def numero(maxim, allow_zero=False, placeholder="Ej: 1"):
+        if allow_zero:
+            min_val = 0
+        else:
+            min_val = 1
+        max_val = 10**maxim - 1
+
+        return forms.TextInput(attrs={
+            'inputmode': 'numeric',
+            'pattern': r'\d*',
+            'placeholder': placeholder,
+            'oninput': f"""
+                this.value = this.value.replace(/[^0-9]/g,'');
+                if(this.value !== '') {{
+                    // Primero limitar la longitud máxima
+                    if(this.value.length > {maxim}) {{
+                        this.value = this.value.slice(0,{maxim});
+                    }}
+                    
+                    // Luego validar el valor numérico
+                    let val = parseInt(this.value);
+                    if(val < {min_val}) {{
+                        this.value = '{min_val}';
+                    }} else if(val > {max_val}) {{
+                        this.value = '{max_val}';
+                    }}
+                }}
+            """,
+            'onkeydown': f"""
+                // Prevenir que se escriban más dígitos si ya se alcanzó el máximo
+                if(this.value.length >= {maxim} && 
+                event.key >= '0' && event.key <= '9' && 
+                !event.ctrlKey && !event.metaKey && 
+                !event.altKey) {{
+                    event.preventDefault();
+                }}
+            """
+        })
+
+
+
+    @staticmethod
+    def abreviatura(max_length=5, placeholder="Ej: ABC"):
+        """
+        Widget para abreviaturas o descripciones cortas.
+        """
+        return forms.TextInput(attrs={
+            'maxlength': str(max_length),
+            'placeholder': placeholder,
+            'oninput': f"if(this.value.length > {max_length}) this.value = this.value.slice(0,{max_length});"
+        })
