@@ -1,9 +1,9 @@
 from django.contrib import admin, messages
 from .models import *
 from django import forms
-from proyecto.validators import ValidacionesBaseForm
-from proyecto.widgets import WidgetsRegulares
-from proyecto.admin_utils import PaginacionAdminMixin
+from proyecto.utils.validators import ValidacionesBaseForm
+from proyecto.utils.widgets import WidgetsRegulares
+from proyecto.utils.admin_utils import PaginacionAdminMixin
 
 class DocumentosClienteForm(forms.ModelForm):
     class Meta:

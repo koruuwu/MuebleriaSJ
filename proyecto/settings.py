@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'clientes',
     'archivos',
+    'Muebles',
 ]
 
 JAZZMIN_SETTINGS = {

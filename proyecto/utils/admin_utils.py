@@ -1,5 +1,7 @@
 # proyecto/admin_utils.py
-
+from django.contrib import admin
+from django.utils.html import format_html
+from proyecto.supabase_client import subir_archivo
 
 class PaginacionAdminMixin:
 
@@ -36,3 +38,28 @@ class PaginacionAdminMixin:
         else:
             self.list_per_page = 10
         return super().changelist_view(request, extra_context=extra_context)
+
+
+
+
+
+class AdminConImagenMixin:
+    readonly_fields = ("vista_previa", "imagen_url", "imagen")
+    bucket_name = "default"  # Cada admin puede sobrescribir este valor
+
+    def save_model(self, request, obj, form, change):
+        archivo = form.cleaned_data.get("archivo_temp")
+        if archivo:
+            ruta, url = subir_archivo(archivo, self.bucket_name)
+            obj.imagen = ruta
+            obj.imagen_url = url
+        super().save_model(request, obj, form, change)
+
+    def vista_previa(self, obj):
+        if getattr(obj, "imagen_url", None):
+            return format_html(
+                '<img src="{}" style="max-height:100px;border-radius:8px;" />',
+                obj.imagen_url,
+            )
+        return "Sin imagen"
+    vista_previa.short_description = "Vista previa"
