@@ -45,6 +45,7 @@ JAZZMIN_SETTINGS = {
     "related_modal_active": True,
     "order_with_respect_to": [
     "Materiales.Materiale",
+    "Materiales.Proveedore",
     "Materiales.CategoriasMateriale",
     "Muebles.Mueble",
     "Muebles.CategoriasMueble",
@@ -60,6 +61,7 @@ JAZZMIN_SETTINGS = {
         "Muebles.Tamaño": "fa-solid fa-ruler",
         "Materiales.materiale":"fa-solid fa-layer-group",
         "Materiales.CategoriasMateriale":"fa-solid fa-list",
+        "Materiales.Proveedore":"fa-solid fa-user-tag",
         "Muebles.CategoriasMueble":"fa-solid fa-list",
         "Materiales.UnidadesMedida":"fa-solid fa-compass-drafting",
         "Muebles.MuebleMateriale":"fa-solid fa-layer-group",
