@@ -63,8 +63,40 @@ class ValidacionesBaseForm(forms.ModelForm):
         if len(valor) > 0 and valor[0] not in primeros_permitidos:
             raise ValidationError(f"{nombre_campo} debe iniciar con {'/'.join(primeros_permitidos)}.")
         return valor
+    
+    def validar_precio(self, valor, nombre_campo="El precio", min_val=0.01, max_val=999999):
+        """
+        Valida precios con:
+        - Solo números y un punto opcional
+        - Máximo dos decimales
+        - Rango configurado
+        """
+        valor = str(valor).strip()
 
+        # No debe estar vacío
+        if not valor:
+            raise ValidationError(f"{nombre_campo} no puede estar vacío.")
+
+        # Validar patrón: números + opcional punto + 1 o 2 decimales
+        if not re.match(r'^\d+(\.\d{1,2})?$', valor):
+            raise ValidationError(f"{nombre_campo} debe ser un número válido.")
+
+        # Convertir a float
+        try:
+            precio = float(valor)
+        except:
+            raise ValidationError(f"{nombre_campo} no es un número válido.")
+
+        # Validar rango
+        if precio < min_val:
+            raise ValidationError(f"{nombre_campo} debe ser mayor o igual a {min_val}.")
+        if precio > max_val:
+            raise ValidationError(f"{nombre_campo} no puede superar {max_val}.")
+
+        return precio
     # ------------------- CLEAN PREDEFINIDOS -------------------
+   
+    
     def clean_nombre(self):
         nombre = self.cleaned_data.get('nombre', '')
         return self.validar_campo_texto(nombre, "El nombre", min_len=10, max_len=50)#--importante usa validador para tipo de dato general
@@ -90,6 +122,12 @@ class ValidacionesBaseForm(forms.ModelForm):
         telefono = self.validar_longitud(telefono, "El teléfono", min_len=8)
         telefono = self.validar_numero_inicio(telefono, "El teléfono", ['2','3','7','8','9'])
         return telefono
+    def clean_precio_base(self):
+        valor = self.cleaned_data.get("precio_base")
+        return self.validar_precio(valor, "El precio")
+
+
+
     
     def clean_stock_minimo(self):
         numero = self.cleaned_data.get('stock_minimo')

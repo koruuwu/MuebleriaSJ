@@ -79,6 +79,8 @@ class WidgetsRegulares:
         max_val = 10**maxim - 1
 
         return forms.TextInput(attrs={
+            #size': maxim'''
+            'style':'width: 200px;',
             'inputmode': 'numeric',
             'pattern': r'\d*',
             'placeholder': placeholder,
@@ -121,4 +123,64 @@ class WidgetsRegulares:
             'maxlength': str(max_length),
             'placeholder': placeholder,
             'oninput': f"if(this.value.length > {max_length}) this.value = this.value.slice(0,{max_length});"
+        })
+    @staticmethod
+    def precio(maxim, allow_zero=False, placeholder="Ej: 199.99"):
+        min_val = 0 if allow_zero else 1
+        max_val = 10**maxim - 1
+
+        return forms.TextInput(attrs={
+            'style':'width: 200px;',
+            'inputmode': 'decimal',
+            'placeholder': placeholder,
+            'oninput': """
+                let raw = this.value.replace(/[^0-9]/g, '');
+                
+                // No permitir empezar con cero si tiene más de 1 dígito
+                if (raw.length > 1 && raw.startsWith('0')) {
+                    raw = raw.substring(1);
+                }
+                
+                // Limitar longitud máxima
+                if (raw.length > %d) {
+                    raw = raw.substring(0, %d);
+                }
+                
+                // Formatear con comas (solo visual)
+                let formatted = '';
+                for (let i = raw.length - 1, count = 0; i >= 0; i--) {
+                    if (count > 0 && count %% 3 === 0) {
+                        formatted = ',' + formatted;
+                    }
+                    formatted = raw[i] + formatted;
+                    count++;
+                }
+                
+                // Guardar el valor sin formato en un campo oculto o data attribute
+                this.setAttribute('data-raw-value', raw);
+                this.value = formatted;
+            """ % (maxim, maxim),
+            'onblur': """
+                // Al salir del campo, restaurar el valor sin formato para el envío
+                const raw = this.getAttribute('data-raw-value');
+                if (raw) {
+                    this.value = raw;
+                }
+            """,
+            'onfocus': """
+                // Al entrar al campo, formatear visualmente otra vez
+                const raw = this.value.replace(/[^0-9]/g, '');
+                if (raw) {
+                    let formatted = '';
+                    for (let i = raw.length - 1, count = 0; i >= 0; i--) {
+                        if (count > 0 && count %% 3 === 0) {
+                            formatted = ',' + formatted;
+                        }
+                        formatted = raw[i] + formatted;
+                        count++;
+                    }
+                    this.setAttribute('data-raw-value', raw);
+                    this.value = formatted;
+                }
+            """
         })

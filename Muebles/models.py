@@ -23,14 +23,14 @@ class Mueble(models.Model):
     nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.
     descripcion = models.TextField(db_column='Descripcion', max_length=250)  # Field name made lowercase.
     precio_base = models.FloatField(db_column='Precio_Base')  # Field name made lowercase.
-    id_categoria = models.ForeignKey('CategoriasMueble', models.DO_NOTHING, db_column='ID_Categoria', blank=True, null=True)  # Field name made lowercase.
-    medida = models.ForeignKey(UnidadesMedida, models.DO_NOTHING, db_column='id_unidadesm', blank=True, null=True)
-    alto = models.FloatField(db_column='Alto', blank=True, null=True)  # Field name made lowercase.
-    ancho = models.FloatField(db_column='Ancho', blank=True, null=True)  # Field name made lowercase.
-    largo = models.FloatField(db_column='Largo', blank=True, null=True)  # Field name made lowercase.
+    categoria = models.ForeignKey('CategoriasMueble', models.DO_NOTHING, db_column='ID_Categoria', blank=False, null=False)  # Field name made lowercase.
+    medida = models.ForeignKey(UnidadesMedida, models.DO_NOTHING, db_column='id_unidadesm', blank=False, null=False)
+    alto = models.FloatField(db_column='Alto', blank=False, null=False)  # Field name made lowercase.
+    ancho = models.FloatField(db_column='Ancho', blank=False, null=False)  # Field name made lowercase.
+    largo = models.FloatField(db_column='Largo', blank=False, null=False)  # Field name made lowercase.
     imagen = models.TextField(blank=True, null=True)
     imagen_url = models.CharField(blank=True, null=True)
-    tamano = models.ForeignKey('Tamaño', models.DO_NOTHING, db_column='id_tamano', blank=True, null=True)
+    tamano = models.ForeignKey('Tamaño', models.DO_NOTHING, db_column='id_tamano', blank=False, null=False)
     Descontinuado = models.BooleanField(db_column='Estado')  # Field name made lowercase.
     archivo_temp = None
     def __str__(self):
