@@ -26,9 +26,11 @@ class DocumentoAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         # Verifica duplicado antes de guardar
         if Documento.objects.exclude(pk=obj.pk).filter(tipo_documento=obj.tipo_documento).exists():
-            messages.warning(request, f'⚠️ El tipo de documento "{obj.tipo_documento}" ya existe.')
+            messages.warning(request, f' El tipo de documento "{obj.tipo_documento}" ya existe.')
         else:
             super().save_model(request, obj, form, change)
+
+
     actions = ["set_pagination_1", "set_pagination_10", "set_pagination_25", "set_pagination_50", "set_pagination_100"]
 
     def set_pagination_1(self, request, queryset):

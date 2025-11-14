@@ -16,6 +16,25 @@ class WidgetsRegulares:
             'oninput': "this.value = this.value.replace(/\\s{2,}/g, ' ');",
             'placeholder': placeholder,
         })
+    
+    #---AGREGAR CAMBIO NO ESPECIFICAR MAX LENGHT PARA VALORES DE PALABRAS, HACERLO DESDE MODEL-sofia castro
+    @staticmethod
+    def comentario(placeholder="Ej: Madera de mala calidad, entrega rapida"):
+        return forms.Textarea(attrs={
+            'rows': 4,  # cantidad de líneas visibles
+            'cols': 40, # ancho del área
+            'maxlength': 150, 
+            'onkeypress': """
+                const val = event.target.value;
+                const key = event.key;
+                if (!/[a-zA-Z\\sáéíóúÁÉÍÓÚñÑ,]/.test(key)) return false;
+                if (val.length >= 2 && val.slice(-2) === key.repeat(2)) return false;
+                return true;
+            """,
+            'oninput': "this.value = this.value.replace(/\\s{2,}/g, ' ');",
+            'placeholder': placeholder,
+        })
+
 
     @staticmethod
     def direccion(placeholder="Ej: Col. Miraflores, Tegucigalpa, Bloque A, 2032"):

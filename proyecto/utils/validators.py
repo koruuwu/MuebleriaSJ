@@ -26,38 +26,57 @@ class ValidacionesBaseForm(forms.ModelForm):
                 if e.message == "Please correct the errors below.":
                     raise ValidationError("Por favor, corrija los errores a continuación.")
             raise e
+        
+    def validar_campo_texto(self, valor, nombre_visible, min_len=1, max_len=100):
+        """
+        Aplica todas las validaciones estándar del sistema:
+        - Longitud mínima y máxima
+        - No dobles espacios
+        - No letras repetidas
+        """
+        valor = valor.strip()
+        valor = self.validar_longitud(valor, nombre_visible, min_len=min_len, max_len=max_len)
+        valor = self.validar_dobles_espacios(valor, nombre_visible)
+        valor = self.validar_letras_repetidas(valor, nombre_visible)
+        return valor
+    
 
     def validar_dobles_espacios(self, valor, nombre_campo):
         if '  ' in valor:
-            raise ValidationError(f"⚠️ No se permiten dobles espacios en {nombre_campo}.")
+            raise ValidationError(f"No se permiten dobles espacios en {nombre_campo}.")
         return valor
 
     def validar_letras_repetidas(self, valor, nombre_campo, max_repeticiones=2):
         """Evita más de 'max_repeticiones' letras iguales seguidas."""
         if re.search(rf'(.)\1{{{max_repeticiones},}}', valor):
-            raise ValidationError(f"⚠️ No se permiten más de {max_repeticiones} letras iguales seguidas en {nombre_campo}.")
+            raise ValidationError(f"No se permiten más de {max_repeticiones} letras iguales seguidas en {nombre_campo}.")
         return valor
 
     def validar_longitud(self, valor, nombre_campo, min_len=None, max_len=None):
         if min_len and len(valor) < min_len:
-            raise ValidationError(f"⚠️ {nombre_campo} debe tener al menos {min_len} caracteres.")
+            raise ValidationError(f"{nombre_campo} debe tener al menos {min_len} caracteres.")
         if max_len and len(valor) > max_len:
-            raise ValidationError(f"⚠️ {nombre_campo} no puede superar los {max_len} caracteres.")
+            raise ValidationError(f"{nombre_campo} no puede superar los {max_len} caracteres.")
         return valor
 
     def validar_numero_inicio(self, valor, nombre_campo, primeros_permitidos):
         if len(valor) > 0 and valor[0] not in primeros_permitidos:
-            raise ValidationError(f"⚠️ {nombre_campo} debe iniciar con {'/'.join(primeros_permitidos)}.")
+            raise ValidationError(f"{nombre_campo} debe iniciar con {'/'.join(primeros_permitidos)}.")
         return valor
 
     # ------------------- CLEAN PREDEFINIDOS -------------------
-
     def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '')
+        return self.validar_campo_texto(nombre, "El nombre", min_len=10, max_len=50)#--importante usa validador para tipo de dato general
+    #validar campo reune los metodos para validacion de nombres-sofia castro
+
+
+    #def clean_nombre(self):
         nombre = self.cleaned_data.get('nombre', '').strip()
         nombre = self.validar_longitud(nombre, "El nombre", min_len=10, max_len=50)
         nombre = self.validar_dobles_espacios(nombre, "El nombre")
         nombre = self.validar_letras_repetidas(nombre, "El nombre")
-        return nombre
+        return nombre#
 
     def clean_direccion(self):
         direccion = self.cleaned_data.get('direccion', '').strip()
@@ -71,6 +90,16 @@ class ValidacionesBaseForm(forms.ModelForm):
         telefono = self.validar_longitud(telefono, "El teléfono", min_len=8)
         telefono = self.validar_numero_inicio(telefono, "El teléfono", ['2','3','7','8','9'])
         return telefono
+    
+    def clean_stock_minimo(self):
+        numero = self.cleaned_data.get('stock_minimo')
+        numero = self.validar_longitud(str(numero), "Stock minimo", min_len=1, max_len=4)
+        return numero
+    
+    def clean_stock_maximo(self):
+        numero = self.cleaned_data.get('stock_maximo')
+        numero = self.validar_longitud(str(numero), "Stock maximo", min_len=1, max_len=5)
+        return numero
 
 
     # ------------------- MÉTODOS ADICIONALES -------------------
