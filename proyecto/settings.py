@@ -155,5 +155,5 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-if DEBUG:#importante para los iframes
+if DEBUG:#importante para los iframes aa
     X_FRAME_OPTIONS = 'ALLOWALL'
