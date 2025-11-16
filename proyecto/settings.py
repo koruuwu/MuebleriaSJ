@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     'clientes',
     'archivos',
     'Materiales',
-    'Ventas',
+    'Muebles',
 ]
 
 JAZZMIN_SETTINGS = {
@@ -43,7 +43,13 @@ JAZZMIN_SETTINGS = {
     # Configuraciones adicionales para forzar español
     "show_ui_builder": False,
     "related_modal_active": True,
-    
+    "order_with_respect_to": [
+    "Materiales.Materiale",
+    "Materiales.Proveedore",
+    "Materiales.CategoriasMateriale",
+    "Muebles.Mueble",
+    "Muebles.CategoriasMueble",
+    ],
     "icons": {
         "auth": "fas fa-users-cog",
         "clientes.cliente": "fas fa-user",
@@ -51,8 +57,17 @@ JAZZMIN_SETTINGS = {
         "archivos.documento": "fa-solid fa-file-lines", 
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
+        "Muebles.Mueble":"fa-solid fa-couch",
+        "Muebles.Tamaño": "fa-solid fa-ruler",
+        "Materiales.materiale":"fa-solid fa-layer-group",
+        "Materiales.CategoriasMateriale":"fa-solid fa-list",
+        "Materiales.Proveedore":"fa-solid fa-user-tag",
+        "Muebles.CategoriasMueble":"fa-solid fa-list",
+        "Materiales.UnidadesMedida":"fa-solid fa-compass-drafting",
+        "Muebles.MuebleMateriale":"fa-solid fa-layer-group",
+        
     },
-    "order_with_respect_to": ["Materiales.Materiale", "Materiales.CategoriasMateriale"],
+    
 
 }
 
@@ -140,5 +155,5 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-if DEBUG:#importante para los iframes aa
+if DEBUG:#importante para los iframes
     X_FRAME_OPTIONS = 'ALLOWALL'
