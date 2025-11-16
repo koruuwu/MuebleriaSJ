@@ -40,6 +40,22 @@ class MuebleForm(ValidacionesBaseForm):
         return self.validar_campo_texto(nombre, "El nombre", min_len=4, max_len=50)
 
 
+class TamañoForm(ValidacionesBaseForm):
+    class Meta:
+        model = Tamaño
+        fields = "__all__"
+        widgets = {
+            'nombre': WidgetsRegulares.nombre("Ej: Pequeño"),     
+            'descripcion': WidgetsRegulares.comentario("Ej: tamaño reducido para 2 personas"),
+        }
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '')
+        return self.validar_campo_texto(nombre, "El nombre", min_len=4, max_len=50)
+
+
+
+
 @admin.register(CategoriasMueble)
 class CategoriasMuebleAdmin(PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
     form = ImagenForm
@@ -50,6 +66,7 @@ class CategoriasMuebleAdmin(PaginacionAdminMixin, AdminConImagenMixin, admin.Mod
 
 @admin.register(Tamaño)
 class TamanoAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+    form=TamañoForm
     list_display = ("nombre", "descripcion")
 
 @admin.register(MuebleMateriale)
@@ -68,6 +85,10 @@ class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixi
     form = MuebleForm
     unique_fields = ['nombre']
     list_display = ("nombre", "descripcion","alto","ancho","largo","medida", "vista_previa")
+    search_fields = ('nombre', 'medida')
+    list_filter = ('tamano__nombre',)
+
+
     bucket_name="muebles"
     inlines=[MuebleMaterialeInline]
     fieldsets = [

@@ -79,6 +79,16 @@ class MedForm(ValidacionesBaseForm):
         valor = self.cleaned_data.get('nombre', '')
         return self.validar_campo_texto(valor, "El nombre", min_len=4, max_len=10)
  
+class CateForm(ValidacionesBaseForm):
+    archivo_temp = forms.FileField(required=False, label="Subir imagen")
+    class Meta:
+        model = CategoriasMateriale
+        fields = "__all__"
+        widgets = {
+            'nombre': WidgetsRegulares.nombre("Ej: Madera"),     
+            'descripcion': WidgetsRegulares.comentario("Ej: Material base para un mueble"),
+        }
+
 
 #----------------ADMINS---------------------
     
@@ -91,7 +101,7 @@ class MaterialeAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenM
 
 @admin.register(CategoriasMateriale)
 class CategoriasMaterialeAdmin(PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
-    form = ImagenForm
+    form = CateForm
     list_display = ("nombre", "descripcion", "vista_previa")
     bucket_name="materiales_cat"
 
@@ -113,7 +123,9 @@ class MaterialProveedorInline(admin.StackedInline):
 @admin.register(Proveedore)
 class ProveedoreAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     form= ProveForm
-    list_display = ("nombre", "telefono", "estado")
+    list_display = ("compañia","nombre", "telefono", "estado")
+    search_fields = ('nombre', 'compañia')
+    list_filter = ('estado__tipo','materialproveedore__material')
     inlines=[MaterialProveedorInline]
     '''fieldsets = [
         ("Información General", {"fields": ("nombre", "telefono")}),
