@@ -6,14 +6,14 @@ from proyecto.utils.widgets import WidgetsRegulares
 from proyecto.utils.admin_utils import PaginacionAdminMixin
 # Register your models here.
 
-class OrdenesVentasForm(forms.ModelForm):
+class OrdenesVentaForm(forms.ModelForm):
     class Meta:
-        model = OrdenesVentas
+        model = OrdenesVenta
         fields = '__all__'
 
-@admin.register(OrdenesVentas)
+@admin.register(OrdenesVenta)
 class OrdenesVentasAdmin(PaginacionAdminMixin, admin.ModelAdmin):
-    form = OrdenesVentasForm
+    form = OrdenesVentaForm
     search_fields = ('id', 'id_cliente__nombre_cliente', 'id_factura')
     list_display = ('id', 'fecha_orden', 'fecha_entrega', 'id_cliente', 'subtotal', 'isv', 'descuento', 'total')
     list_display_links = ('id', 'id_cliente')
