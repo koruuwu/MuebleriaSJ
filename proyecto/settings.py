@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'archivos',
     'Materiales',
     'Muebles',
+    'Ventas',
 ]
 
 JAZZMIN_SETTINGS = {
