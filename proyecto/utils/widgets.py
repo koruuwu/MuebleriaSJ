@@ -43,7 +43,7 @@ class WidgetsRegulares:
             'onkeypress': """
                 const val = event.target.value;
                 const key = event.key;
-                if (!/[a-zA-Z\\sáéíóúÁÉÍÓÚñÑ]/.test(key)) return false;
+                if (!/[a-zA-Z\\sáéíóúÁÉÍÓÚñÑ\\,\\.]/.test(key)) return false;
                 if (val.length >= 2 && val.slice(-2) === key.repeat(2)) return false;
                 return true;
             """,
@@ -183,4 +183,20 @@ class WidgetsRegulares:
                     this.value = formatted;
                 }
             """
+        })
+    
+class WidgetsEspeciales:
+    @staticmethod
+    def nombreSucursal(placeholder="Ej: Mueblería San José - Germania"):
+        return forms.TextInput(attrs={
+            'maxlength': 50,
+            'onkeypress': """
+                const val = event.target.value;
+                const key = event.key;
+                if (!/[a-zA-Z\\sáéíóúÁÉÍÓÚñÑ\\-]/.test(key)) return false;
+                if (val.length >= 2 && val.slice(-2) === key.repeat(2)) return false;
+                return true;
+            """,
+            'oninput': "this.value = this.value.replace(/\\s{2,}/g, ' ');",
+            'placeholder': placeholder,
         })

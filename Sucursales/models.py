@@ -1,7 +1,7 @@
 from django.db import models
 
 # Create your models here.
-class Sucursales(models.Model):
+class Sucursale(models.Model):
     id = models.BigAutoField(primary_key=True)
     fecha_registro = models.DateTimeField()
     nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.

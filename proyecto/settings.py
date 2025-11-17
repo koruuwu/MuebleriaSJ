@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'Materiales',
     'Muebles',
     'Ventas',
+    'Sucursales',
 ]
 
 JAZZMIN_SETTINGS = {
@@ -66,6 +67,8 @@ JAZZMIN_SETTINGS = {
         "Muebles.CategoriasMueble":"fa-solid fa-list",
         "Materiales.UnidadesMedida":"fa-solid fa-compass-drafting",
         "Muebles.MuebleMateriale":"fa-solid fa-layer-group",
+        "Sucursales.Sucursale":"fa-solid fa-store",
+        "Ventas.OrdenesVenta":"fa-solid fa-dollar-sign",
         
     },
     
