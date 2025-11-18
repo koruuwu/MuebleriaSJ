@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'Muebles',
     'Ventas',
     'Sucursales',
+    'Empleados',
 ]
 
 JAZZMIN_SETTINGS = {
@@ -69,6 +70,7 @@ JAZZMIN_SETTINGS = {
         "Muebles.MuebleMateriale":"fa-solid fa-layer-group",
         "Sucursales.Sucursale":"fa-solid fa-store",
         "Ventas.OrdenesVenta":"fa-solid fa-dollar-sign",
+        "Empleados.Empleado":"fa-solid fa-user-tie",
         
     },
     

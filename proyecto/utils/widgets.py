@@ -68,6 +68,93 @@ class WidgetsRegulares:
             """,
             'placeholder': placeholder,
         })
+    
+
+    @staticmethod
+    def email(placeholder="Ej: usuario@correo.com"):
+        """
+        Widget para campos de email con validación en tiempo real.
+        - No permite espacios
+        - Valida formato básico de email
+        - Elimina espacios automáticamente
+        """
+        return forms.TextInput(attrs={
+            'maxlength': 254,  # Longitud máxima estándar para emails
+            'onkeypress': """
+                // Prevenir espacios en tiempo real
+                if (event.key === ' ') {
+                    event.preventDefault();
+                    return false;
+                }
+                return true;
+            """,
+            'oninput': """
+                // Eliminar todos los espacios y validar formato básico
+                let input = event.target;
+                let value = input.value;
+                
+                // Eliminar espacios
+                value = value.replace(/\\s/g, '');
+                input.value = value;
+                
+                // Validación visual del formato email
+                const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+                if (value && !emailRegex.test(value)) {
+                    input.style.borderColor = '#dc3545';
+                    input.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+                } else {
+                    input.style.borderColor = '';
+                    input.style.boxShadow = '';
+                }
+            """,
+            'onblur': """
+                // Validación más estricta al perder el foco
+                const input = event.target;
+                const value = input.value.trim();
+                
+                // Patrón más específico para emails
+                const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$/;
+                
+                if (value && !emailRegex.test(value)) {
+                    input.style.borderColor = '#dc3545';
+                    input.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+                    
+                    // Mostrar mensaje de error temporal
+                    let errorMsg = input.nextElementSibling;
+                    if (!errorMsg || !errorMsg.classList.contains('email-error-msg')) {
+                        errorMsg = document.createElement('div');
+                        errorMsg.className = 'email-error-msg text-danger small mt-1';
+                        input.parentNode.appendChild(errorMsg);
+                    }
+                    errorMsg.textContent = 'Por favor ingrese un correo electrónico válido';
+                } else {
+                    input.style.borderColor = '#28a745';
+                    input.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                    
+                    // Eliminar mensaje de error si existe
+                    const errorMsg = input.nextElementSibling;
+                    if (errorMsg && errorMsg.classList.contains('email-error-msg')) {
+                        errorMsg.remove();
+                    }
+                }
+            """,
+            'onfocus': """
+                // Limpiar estilos al enfocar
+                const input = event.target;
+                input.style.borderColor = '';
+                input.style.boxShadow = '';
+                
+                // Eliminar mensaje de error si existe
+                const errorMsg = input.nextElementSibling;
+                if (errorMsg && errorMsg.classList.contains('email-error-msg')) {
+                    errorMsg.remove();
+                }
+            """,
+            'placeholder': placeholder,
+            'autocomplete': 'email',
+            'class': 'email-widget'
+        })
+    
 
 
     @staticmethod

@@ -2,6 +2,7 @@
 import re
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 
 class ValidacionesBaseForm(forms.ModelForm):
     """
@@ -26,6 +27,47 @@ class ValidacionesBaseForm(forms.ModelForm):
                 if e.message == "Please correct the errors below.":
                     raise ValidationError("Por favor, corrija los errores a continuación.")
             raise e
+        
+    
+    def clean_email(self):
+        """
+        Validación CORREGIDA para el campo email
+        """
+        email = self.cleaned_data.get('email', '').strip()
+    
+        # 1. No vacío
+        if not email:
+            raise ValidationError("El correo electrónico no puede estar vacío.")
+    
+        # 2. No espacios
+        if ' ' in email:
+            raise ValidationError("El correo electrónico no puede contener espacios.")
+    
+        # 3. Formato válido
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            raise ValidationError("Formato de correo inválido. Use: usuario@dominio.com")
+    
+        # 4. Validación Django
+        try:
+            validate_email(email)
+        except ValidationError:
+            raise ValidationError("El correo electrónico no es válido.")
+    
+        # 5. Longitud máxima
+        if len(email) > 254:
+            raise ValidationError("El correo no puede superar los 254 caracteres.")
+    
+        # 6. Verificar duplicados
+        if self.instance and self.instance.pk:
+            # Editando - excluir empleado actual
+            if self._meta.model.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+                raise ValidationError("Este correo electrónico ya está registrado por otro empleado.")
+        else:
+            # Creando nuevo
+            if self._meta.model.objects.filter(email=email).exists():
+                raise ValidationError("Este correo electrónico ya está registrado en el sistema.")
+    
+        return email.lower()  # Normalizar a minúsculas
         
     def validar_campo_texto(self, valor, nombre_visible, min_len=1, max_len=100):
         """
@@ -63,6 +105,11 @@ class ValidacionesBaseForm(forms.ModelForm):
         if len(valor) > 0 and valor[0] not in primeros_permitidos:
             raise ValidationError(f"{nombre_campo} debe iniciar con {'/'.join(primeros_permitidos)}.")
         return valor
+    
+
+    # proyecto/validators.py (agregar estas funciones)
+
+
     
     def validar_precio(self, valor, nombre_campo="El precio", min_val=0.01, max_val=999999):
         """
