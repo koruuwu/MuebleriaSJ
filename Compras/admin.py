@@ -39,10 +39,13 @@ class InventarioMuebleAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     readonly_fields=('ultima_entrada', 'ultima_salida')
     list_filter = ('estado','ubicación')
 
-
 class DetalleCotizacionesInline(admin.TabularInline):
     model = DetalleCotizaciones
-    extra = 1
+    extra = 0
+
+    class Media:
+        js = ('js/detalle_cotizacion.js',)
+
     
 
 @admin.register(Cotizacione)
@@ -71,4 +74,18 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
 
         super().save_model(request, obj, form, change)
 
+    def obtener_precio_mueble(self, request, mueble_id):
+        try:
+            mueble = Mueble.objects.get(id=mueble_id)
+            return JsonResponse({"precio": mueble.precio_base})  # <- aquí el nombre correcto
+        except Mueble.DoesNotExist:
+            return JsonResponse({"precio": 0})
+
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path("obtener_precio_mueble/<int:mueble_id>/", self.obtener_precio_mueble),
+        ]
+        return custom + urls
 
