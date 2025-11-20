@@ -79,7 +79,7 @@ class WidgetsRegulares:
         - Elimina espacios automáticamente
         """
         return forms.TextInput(attrs={
-            'maxlength': 254,  # Longitud máxima estándar para emails
+            'maxlength': 50,  # Longitud máxima estándar para emails
             'onkeypress': """
                 // Prevenir espacios en tiempo real
                 if (event.key === ' ') {

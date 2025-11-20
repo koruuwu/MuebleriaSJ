@@ -12,6 +12,8 @@ class ImagenForm(ValidacionesBaseForm):
     class Meta:
         model = None
         fields = "__all__"
+        #exclude = ('descripcion',)#
+
         widgets = {
             'nombre': WidgetsRegulares.nombre("Ej: Lusiana Barrera Campos"),
         }
@@ -44,6 +46,7 @@ class ProveForm(ValidacionesBaseForm):
             'nombre': WidgetsRegulares.nombre("Ej: Lusiana Campos Berrillo"),
             'compañia': WidgetsRegulares.nombre("Ej: Maderas el Tropico SA"),
             'telefono': WidgetsRegulares.telefono(),
+            'email': WidgetsRegulares.email(),   
         }
      
     def clean_compañia(self):

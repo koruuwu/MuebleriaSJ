@@ -59,6 +59,7 @@ class Proveedore(models.Model):
     compañia= models.CharField(db_column='Compañia', help_text="Aquí se ingresará el nombre de la compañía proveedora.")
     nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.
     telefono = models.CharField(db_column='Telefono')  # Field name made lowercase.
+    email = models.CharField(db_column='email', max_length=50)
     estado = models.ForeignKey('EstadosPersonas', models.DO_NOTHING, db_column='Estado', blank=False, null=False, default=1)  
     #ForeignKey, el valor de default debe ser la clave primaria (ID) de la fila a la que quieres referenciar, no el texto-sofia castro
     def __str__(self):

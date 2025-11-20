@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'Ventas',
     'Sucursales',
     'Empleados',
+    'Compras',
 ]
 
 JAZZMIN_SETTINGS = {
