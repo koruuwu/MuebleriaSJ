@@ -158,7 +158,11 @@ LOCALE_PATHS = [
 ]
 
 # Static files
-STATIC_URL = 'static/'
+# settings.py
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
