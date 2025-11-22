@@ -132,7 +132,7 @@ class ListaCInline(admin.StackedInline):
     extra = 0
     
     class Media:
-        js = ("js/filtro_material_proveedor.js",)
+        js = ("js/filtro_material_proveedor.js", "js/requerimiento_precio.js",)
  
 
 
@@ -161,6 +161,22 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
                 materialproveedore__material=material_id
             ).values("id", "nombre")
         return JsonResponse(list(proveedores), safe=False)
+    
+    def obtener_precio_material(self, request, material_id, proveedor_id):
+        try:
+            material_id = int(material_id)
+            proveedor_id = int(proveedor_id)
+            rel = MaterialProveedore.objects.filter(
+                material_id=material_id,
+                id_proveedor_id=proveedor_id
+            ).first()
+            precio = rel.precio_actual if rel else 0
+        except Exception as e:
+            import traceback; traceback.print_exc()
+            precio = 0
+        return JsonResponse({"precio": precio})
+
+
 
     # Registrar URLs custom
     def get_urls(self):
@@ -175,6 +191,11 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
                 "filtrar_proveedores/<int:material_id>/",
                 self.admin_site.admin_view(self.get_proveedores_por_material),
                 name="lista_compra_filtrar_proveedores",
+            ),
+            path(
+                "obtener_precio_material/<int:material_id>/<int:proveedor_id>/",
+                self.admin_site.admin_view(self.obtener_precio_material),
+                name="obtener_precio_material",
             ),
         ]
         return custom + urls

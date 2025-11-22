@@ -2,7 +2,7 @@ from django.db import models
 from Sucursales.models import Sucursale
 from Muebles.models import Mueble
 from clientes.models import Cliente
-from Materiales.models import Materiale, Proveedore
+from Materiales.models import Materiale, Proveedore, MaterialProveedore
 class InventarioMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
     id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
