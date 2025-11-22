@@ -6,7 +6,7 @@ from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMi
 from datetime import timedelta
 from django.urls import path
 from django.http import JsonResponse
-from django.utils.safestring import mark_safe
+from django import forms
 
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
@@ -39,7 +39,7 @@ class InventarioMuebleAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     readonly_fields=('ultima_entrada', 'ultima_salida')
     list_filter = ('estado','ubicación')
 
-class DetalleCotizacionesInline(admin.TabularInline):
+class DetalleCotizacionesInline(admin.StackedInline):
     model = DetalleCotizaciones
     extra = 0
 
@@ -88,4 +88,93 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
             path("obtener_precio_mueble/<int:mueble_id>/", self.obtener_precio_mueble),
         ]
         return custom + urls
+#------------------------------------------COMPRAS------------------------------------
+class RequerimientoForm(forms.ModelForm):
+    class Meta:
+        model = RequerimientoMateriale
+        fields = "__all__"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        data = self.data or self.initial
+
+        # Inicial: mostrar todos
+        self.fields["material"].queryset = Materiale.objects.all()
+        self.fields["proveedor"].queryset = Proveedore.objects.all()
+
+        # Filtrar proveedores si hay material
+        if data.get("material"):
+            material_id = data.get("material")
+            self.fields["proveedor"].queryset = Proveedore.objects.filter(
+                materialproveedore__material=material_id
+            ).distinct()
+
+        # Filtrar materiales si hay proveedor
+        elif data.get("proveedor"):
+            proveedor_id = data.get("proveedor")
+            self.fields["material"].queryset = Materiale.objects.filter(
+                materialproveedore__id_proveedor=proveedor_id
+            ).distinct()
+
+        # Cuando se edita registro existente
+        if self.instance.pk:
+            self.fields["proveedor"].queryset = Proveedore.objects.filter(
+                materialproveedore__material=self.instance.material
+            ).distinct()
+            self.fields["material"].queryset = Materiale.objects.filter(
+                materialproveedore__id_proveedor=self.instance.proveedor
+            ).distinct()
+
+
+class ListaCInline(admin.StackedInline):
+    form = RequerimientoForm
+    model = RequerimientoMateriale
+    extra = 0
+    
+    class Media:
+        js = ("js/filtro_material_proveedor.js",)
+ 
+
+
+@admin.register(ListaCompra)
+class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = ("id", "fecha_solicitud", "prioridad", "estado")
+    readonly_fields = ("fecha_solicitud",)
+    list_filter = ('estado','prioridad',)
+    inlines = [ListaCInline]
+
+    # Vistas para filtrar
+    def get_materiales_por_proveedor(self, request, proveedor_id):
+        if proveedor_id == 0:
+            materiales = Materiale.objects.all().values("id", "nombre")
+        else:
+            materiales = Materiale.objects.filter(
+                materialproveedore__id_proveedor=proveedor_id
+            ).values("id", "nombre")
+        return JsonResponse(list(materiales), safe=False)
+
+    def get_proveedores_por_material(self, request, material_id):
+        if material_id == 0:
+            proveedores = Proveedore.objects.all().values("id", "nombre")
+        else:
+            proveedores = Proveedore.objects.filter(
+                materialproveedore__material=material_id
+            ).values("id", "nombre")
+        return JsonResponse(list(proveedores), safe=False)
+
+    # Registrar URLs custom
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "filtrar_materiales/<int:proveedor_id>/",
+                self.admin_site.admin_view(self.get_materiales_por_proveedor),
+                name="lista_compra_filtrar_materiales",
+            ),
+            path(
+                "filtrar_proveedores/<int:material_id>/",
+                self.admin_site.admin_view(self.get_proveedores_por_material),
+                name="lista_compra_filtrar_proveedores",
+            ),
+        ]
+        return custom + urls

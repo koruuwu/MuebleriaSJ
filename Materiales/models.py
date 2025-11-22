@@ -96,6 +96,7 @@ class MaterialProveedore(models.Model):
     creado = models.DateTimeField(auto_now_add=True)
     material = models.ForeignKey('Materiale', models.DO_NOTHING, db_column='id_material', blank=False, null=False)
     id_proveedor = models.ForeignKey('Proveedore', models.DO_NOTHING, db_column='id_proveedor', blank=False, null=False)
+    precio_actual = models.FloatField(db_column='precio')
     tiempo = models.BigIntegerField(db_column='Tiempo', blank=False, null=False)
     unidad_tiempo = models.CharField(
         db_column='Unidad tiempo',
