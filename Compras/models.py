@@ -176,10 +176,13 @@ class RequerimientoMateriale(models.Model):
 class DetalleRecibido(models.Model):
     COMP = 'completo'
     INCOMP = 'incompleto'
+    EX ='excedido'
 
     EI_CHOICES = [
         (COMP, 'Completo'),
         (INCOMP, 'Incompleto'),
+        (EX, 'Exedido'),
+
     ]
     id = models.BigAutoField(primary_key=True)
     orden = models.ForeignKey('ListaCompra', models.DO_NOTHING, blank=True, null=True)
