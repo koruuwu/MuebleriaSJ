@@ -90,6 +90,7 @@ class ListaCompra(models.Model):
     PENDIENTE = 'pendiente'
     APROBADA = 'aprobada'
     RECHAZADA='rechazada'
+    RECIBIDA='recibida'
     INCOMPLETA='incompleta'
     COMPLETA='completa'
     
@@ -100,6 +101,7 @@ class ListaCompra(models.Model):
         (RECHAZADA, 'Rechazada'),
         (INCOMPLETA, 'Incompleta'),
         (COMPLETA, 'Completa'),
+        (RECIBIDA, 'Recibida'),
     ]
  
 

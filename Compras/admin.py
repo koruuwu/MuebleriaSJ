@@ -107,23 +107,22 @@ class RequerimientoForm(forms.ModelForm):
     
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
         data = self.data or self.initial
 
-        # Inicial: mostrar todos
-        self.fields["material"].queryset = Materiale.objects.all()
-        self.fields["proveedor"].queryset = Proveedore.objects.all()
+        # Solo modificar si existen los campos
+        if "material" in self.fields:
+            self.fields["material"].queryset = Materiale.objects.all()
+        if "proveedor" in self.fields:
+            self.fields["proveedor"].queryset = Proveedore.objects.all()
 
-        # Filtrar proveedores si hay material
-        if data.get("material"):
+        if data.get("material") and "proveedor" in self.fields:
             material_id = data.get("material")
             self.fields["proveedor"].queryset = Proveedore.objects.filter(
                 materialproveedore__material=material_id
             ).distinct()
 
-        # Filtrar materiales si hay proveedor
-        elif data.get("proveedor"):
+        elif data.get("proveedor") and "material" in self.fields:
             proveedor_id = data.get("proveedor")
             self.fields["material"].queryset = Materiale.objects.filter(
                 materialproveedore__id_proveedor=proveedor_id
@@ -131,45 +130,55 @@ class RequerimientoForm(forms.ModelForm):
 
         # Cuando se edita registro existente
         if self.instance.pk:
-            self.fields["proveedor"].queryset = Proveedore.objects.filter(
-                materialproveedore__material=self.instance.material
-            ).distinct()
-            self.fields["material"].queryset = Materiale.objects.filter(
-                materialproveedore__id_proveedor=self.instance.proveedor
-            ).distinct()
+            if "proveedor" in self.fields:
+                self.fields["proveedor"].queryset = Proveedore.objects.filter(
+                    materialproveedore__material=self.instance.material
+                ).distinct()
+            if "material" in self.fields:
+                self.fields["material"].queryset = Materiale.objects.filter(
+                    materialproveedore__id_proveedor=self.instance.proveedor
+                ).distinct()
+
 
 
 class ListaCInline(admin.StackedInline):
     form = RequerimientoForm
     model = RequerimientoMateriale
     extra = 0
-    
+    def get_readonly_fields(self, request, obj=None):
+        # Si la orden está completa, todos los campos del inline son readonly
+        if obj and obj.pk and obj.estado == 'completa':
+            return [f.name for f in self.model._meta.fields]
+        return super().get_readonly_fields(request, obj)
+
+    def has_add_permission(self, request, obj=None):
+        # No permitir agregar si la orden está completa
+        if obj and obj.pk and obj.estado == 'completa':
+            return False
+        return super().has_add_permission(request, obj)
+
     class Media:
         js = ("js/filtro_material_proveedor.js", "js/requerimiento_precio.js",)
+
+    
+
  
 class DetalleRecibCInline(admin.StackedInline):
     model = DetalleRecibido
     extra = 0
-    
-    def get_formset(self, request, obj=None, **kwargs):
-        formset = super().get_formset(request, obj, **kwargs)
-        
-        # Filtrar productos solo si hay una lista de compra existente
+    def has_add_permission(self, request, obj=None):
+        # Solo permitir agregar si la orden existe y está marcada como 'recibida'
         if obj and obj.pk:
-            # Obtener los materiales de los requerimientos de esta lista
-            materiales_ids = RequerimientoMateriale.objects.filter(
-                id_lista=obj
-            ).values_list('material_id', flat=True)
-            
-            # Aplicar el filtro al campo product
-            formset.form.base_fields['product'].queryset = Materiale.objects.filter(
-                id__in=materiales_ids
-            )
-        else:
-            # Si es nueva lista, no mostrar materiales hasta que se guarden requerimientos
-            formset.form.base_fields['product'].queryset = Materiale.objects.none()
-            
-        return formset
+            return obj.estado == 'recibida'
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        # Si la orden está completa, todo es readonly
+        if obj and obj.pk and obj.estado == 'completa':
+            return [f.name for f in self.model._meta.fields]
+        return super().get_readonly_fields(request, obj)
+    
+   
     
     class Media:
         js = ("js/filtrar_productos_por_orden.js",)
@@ -180,6 +189,13 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     readonly_fields = ("fecha_solicitud",)
     list_filter = ('estado','prioridad',)
     inlines = [ListaCInline, DetalleRecibCInline]
+    def get_readonly_fields(self, request, obj=None):
+        # Si la orden está completa, todos los campos del admin son readonly
+        if obj and obj.pk and obj.estado == 'completa':
+            return [f.name for f in self.model._meta.fields]
+        return super().get_readonly_fields(request, obj)
+    
+
 
     # Vistas para filtrar
     def get_materiales_por_proveedor(self, request, proveedor_id):
