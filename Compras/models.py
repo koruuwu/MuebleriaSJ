@@ -191,13 +191,14 @@ class DetalleRecibido(models.Model):
         (COMP, 'Completo'),
         (INCOMP, 'Incompleto'),
         (EXEDIDO, 'Exedido'),
-
     ]
+    
     id = models.BigAutoField(primary_key=True)
     orden = models.ForeignKey('ListaCompra', models.DO_NOTHING, blank=True, null=True)
     product = models.ForeignKey(Materiale, models.DO_NOTHING, blank=True, null=True)
     cantidad_ord = models.BigIntegerField(blank=True, null=True)
-    cantidad_recibida = models.BigIntegerField(blank=True, null=True)
+    aporte = models.BigIntegerField(blank=True, null=True)  # Nuevo campo principal
+    cantidad_recibida = models.BigIntegerField(blank=True, null=True)  # Se actualizará automáticamente
     estado_item = models.CharField(blank=True, null=True, choices=EI_CHOICES)
 
     class Meta:
@@ -206,11 +207,18 @@ class DetalleRecibido(models.Model):
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            # Guardar detalle primero
+            # Si hay aporte, actualizar cantidad_recibida
+            if self.aporte is not None and self.aporte > 0:
+                if not self.cantidad_recibida:
+                    self.cantidad_recibida = self.aporte
+                else:
+                    self.cantidad_recibida += self.aporte
+            
+            # Guardar el detalle primero
             super().save(*args, **kwargs)
 
-            # Actualizar inventario solo si hay cantidad recibida
-            if self.product and self.cantidad_recibida:
+            # Actualizar inventario solo si hay APORTE
+            if self.product and self.aporte and self.aporte > 0:
                 # Si existe inventario para este material y sucursal
                 inventario, created = InventarioMateriale.objects.get_or_create(
                     id_material=self.product,
@@ -221,12 +229,20 @@ class DetalleRecibido(models.Model):
                     }
                 )
 
-                # Sumar la cantidad recibida
-                inventario.cantidad_disponible = (inventario.cantidad_disponible or 0) + self.cantidad_recibida
+                # Sumar el APORTE al inventario
+                inventario.cantidad_disponible = (inventario.cantidad_disponible or 0) + self.aporte
                 inventario.ultima_entrada = timezone.now().date()
+                
+                # ACTUALIZAR ESTADO AUTOMÁTICAMENTE
+                inventario.estado = self.calcular_estado_automatico(
+                    inventario.cantidad_disponible, 
+                    self.product
+                )
+                
                 inventario.save()
 
             # Actualizar estado general de la lista
+
             if self.orden:
                 detalles = DetalleRecibido.objects.filter(orden=self.orden)
                 if detalles.filter(estado_item=self.INCOMP).exists():
@@ -236,6 +252,20 @@ class DetalleRecibido(models.Model):
                 else:
                     self.orden.estado = ListaCompra.PENDIENTE
                 self.orden.save()
+    
+    def calcular_estado_automatico(self, cantidad, material):
+        """Calcular estado automáticamente basado en cantidad y stock mínimo"""
+        if getattr(material, 'descontinuado', False):
+            return Estados.objects.get(id=4)  # Descontinuado
+        
+        stock_minimo = getattr(material, 'stock_minimo', 10)
+        
+        if cantidad <= 0:
+            return Estados.objects.get(id=3)  # Agotado
+        elif cantidad < stock_minimo:
+            return Estados.objects.get(id=2)  # Bajo Stock
+        else:
+            return Estados.objects.get(id=1)  # Disponible
 
 class HistorialPrecio(models.Model):
     id = models.BigAutoField(primary_key=True)

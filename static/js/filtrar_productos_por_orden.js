@@ -14,7 +14,9 @@ document.addEventListener("DOMContentLoaded", function() {
         
         productSelects.forEach(select => {
             select.disabled = false;
-            select.innerHTML = '<option value="">Cargando productos...</option>';
+            // No borramos el valor guardado, lo mantenemos
+            const currentValue = select.value;
+            select.innerHTML = currentValue ? `<option value="${currentValue}">Cargando producto guardado...</option>` : '<option value="">Cargando productos...</option>';
         });
         
         const url = `/admin/Compras/listacompra/obtener_productos_por_lista/${listaCompraId}/`;
@@ -30,6 +32,7 @@ document.addEventListener("DOMContentLoaded", function() {
             console.log('Datos recibidos:', data);
             productSelects.forEach(select => {
                 const currentValue = select.value;
+                // Solo reiniciamos opciones si la opción actual no existe en la lista nueva
                 select.innerHTML = '<option value="">---------</option>';
                 
                 data.forEach(producto => {
@@ -38,6 +41,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     option.textContent = `${producto.nombre} (Req: ${producto.cantidad_necesaria})`;
                     option.setAttribute('data-cantidad', producto.cantidad_necesaria);
                     
+                    // Mantener seleccionado el valor guardado
                     if (currentValue == producto.id) {
                         option.selected = true;
                         autocompletarCantidadOrd(select, producto.cantidad_necesaria);
@@ -45,6 +49,15 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     select.appendChild(option);
                 });
+
+                // Si el valor guardado no estaba en la lista, crear opción temporal
+                if (currentValue && !Array.from(select.options).some(o => o.value == currentValue)) {
+                    const opt = document.createElement('option');
+                    opt.value = currentValue;
+                    opt.textContent = 'Valor guardado';
+                    opt.selected = true;
+                    select.appendChild(opt);
+                }
                 
                 // Actualizar Select2
                 if (window.jQuery && window.jQuery.fn.select2) {
@@ -60,13 +73,13 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
     
-    // Función para autocompletar cantidad_ord
+    // Función para autocompletar cantidad_ord (MODIFICADA para usar APORTE)
     function autocompletarCantidadOrd(productSelect, cantidadNecesaria) {
         console.log('Autocompletando cantidad:', cantidadNecesaria);
 
         const prefix = productSelect.id.split('-product')[0];
         const cantidadOrdInput = document.querySelector(`#${prefix}-cantidad_ord`);
-        const cantidadRecibidaInput = document.querySelector(`#${prefix}-cantidad_recibida`);
+        const aporteInput = document.querySelector(`#${prefix}-aporte`);
         const estadoItemSelect = document.querySelector(`#${prefix}-estado_item`);
 
         if (cantidadOrdInput) {
@@ -77,29 +90,66 @@ document.addEventListener("DOMContentLoaded", function() {
             cantidadOrdInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
 
-        // Actualizar estado basado en la cantidad recibida actual
-        if (cantidadRecibidaInput && estadoItemSelect && cantidadNecesaria > 0) {
-            actualizarEstadoItem(cantidadRecibidaInput, cantidadNecesaria, estadoItemSelect);
+        // Inicializar aporte como la cantidad necesaria (puede ser modificado después)
+        if (aporteInput && !aporteInput.value) {
+            aporteInput.value = cantidadNecesaria;
+            console.log('Valor inicial de aporte:', aporteInput.value);
+            
+            // Disparar eventos para actualizar estado
+            aporteInput.dispatchEvent(new Event('change', { bubbles: true }));
+            aporteInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // Actualizar estado basado en el APORTE actual
+        if (aporteInput && estadoItemSelect && cantidadNecesaria > 0) {
+            actualizarEstadoItem(aporteInput, cantidadNecesaria, estadoItemSelect);
         }
     }
 
-    // Función para actualizar el estado del ítem
-   function actualizarEstadoItem(cantidadRecibidaInput, cantidadNecesaria, estadoItemSelect) {
-        const cantidadRecibida = parseInt(cantidadRecibidaInput.value || 0, 10);
-
-        // Solo actualizar si hay cambio real o si nunca se ha marcado
-        if (!estadoItemSelect.value || cantidadRecibidaInput.dataset.lastValue != cantidadRecibida) {
-            if (cantidadRecibida === cantidadNecesaria) {
-                estadoItemSelect.value = 'completo';
-            } else if (cantidadRecibida > cantidadNecesaria) {
-                estadoItemSelect.value = 'excedido';
-            } else {
-                estadoItemSelect.value = 'incompleto';
+    // Función para actualizar estado_item basado en cantidad_recibida vs cantidad_ord
+    function setupCantidadRecibidaListeners() {
+        // Escuchar cambios en todos los inputs de cantidad_recibida
+        document.addEventListener('input', function(event) {
+            if (event.target.matches('input[id$="-cantidad_recibida"]')) {
+                actualizarEstadoDesdeCantidadRecibida(event.target);
             }
+        });
 
-            // Guardar valor actual para no recalcular sin necesidad
-            cantidadRecibidaInput.dataset.lastValue = cantidadRecibida;
+        // También escuchar eventos change
+        document.addEventListener('change', function(event) {
+            if (event.target.matches('input[id$="-cantidad_recibida"]')) {
+                actualizarEstadoDesdeCantidadRecibida(event.target);
+            }
+        });
+    }
 
+    // Nueva función para actualizar estado desde cantidad_recibida
+    function actualizarEstadoDesdeCantidadRecibida(input) {
+        const prefix = input.id.split('-cantidad_recibida')[0];
+        
+        const cantidadOrdInput = document.querySelector(`#${prefix}-cantidad_ord`);
+        const estadoItemSelect = document.querySelector(`#${prefix}-estado_item`);
+        const cantidadRecibida = parseInt(input.value || 0, 10);
+        
+        if (cantidadOrdInput && estadoItemSelect) {
+            const cantidadOrd = parseInt(cantidadOrdInput.value || 0, 10);
+            
+            console.log(`Cantidad recibida: ${cantidadRecibida}, Cantidad ord: ${cantidadOrd}`);
+            
+            if (cantidadRecibida === cantidadOrd) {
+                estadoItemSelect.value = 'completo';
+                console.log('✓ Estado cambiado a COMPLETO por cantidad_recibida');
+            } else if (cantidadRecibida > cantidadOrd) {
+                estadoItemSelect.value = 'excedido';
+                console.log('✓ Estado cambiado a EXCEDIDO por cantidad_recibida');
+            } else if (cantidadRecibida > 0) {
+                estadoItemSelect.value = 'incompleto';
+                console.log('✓ Estado cambiado a INCOMPLETO por cantidad_recibida');
+            }
+            
+            // ACTUALIZAR ESTADO DE LA LISTA
+            actualizarEstadoLista();
+            
             // Actualizar Select2 si aplica
             if (window.jQuery && window.jQuery.fn.select2) {
                 window.jQuery(estadoItemSelect).trigger('change.select2');
@@ -107,15 +157,76 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    // Función para actualizar el estado del ítem (MODIFICADA - versión simplificada)
+    function actualizarEstadoItem(aporteInput, cantidadNecesaria, estadoItemSelect) {
+        const aporte = parseInt(aporteInput.value || 0, 10);
+        const prefix = aporteInput.id.split('-aporte')[0];
+        
+        // Buscar cantidad_recibida actual
+        const cantidadRecibidaInput = document.querySelector(`#${prefix}-cantidad_recibida`);
+        const cantidadRecibida = cantidadRecibidaInput ? parseInt(cantidadRecibidaInput.value || 0, 10) : 0;
+        
+        console.log(`Actualizando estado - Aporte: ${aporte}, CantRecibida: ${cantidadRecibida}, CantNecesaria: ${cantidadNecesaria}`);
 
+        // PRIORIDAD: Si cantidad_recibida está disponible, usarla para el cálculo
+        const cantidadEfectiva = cantidadRecibida > 0 ? cantidadRecibida : aporte;
 
-    // Función para configurar listeners de cantidad recibida
-    function setupCantidadRecibidaListeners() {
-        // Escuchar cambios en todos los inputs de cantidad recibida
+        if (cantidadEfectiva === cantidadNecesaria) {
+            estadoItemSelect.value = 'completo';
+        } else if (cantidadEfectiva > cantidadNecesaria) {
+            estadoItemSelect.value = 'excedido';
+        } else {
+            estadoItemSelect.value = 'incompleto';
+        }
+
+        // Guardar valor actual para no recalcular sin necesidad
+        aporteInput.dataset.lastValue = aporte;
+
+        // Actualizar Select2 si aplica
+        if (window.jQuery && window.jQuery.fn.select2) {
+            window.jQuery(estadoItemSelect).trigger('change.select2');
+        }
+        
+        // ACTUALIZAR ESTADO DE LA LISTA
+        actualizarEstadoLista();
+        
+        console.log(`✓ Estado actualizado a: ${estadoItemSelect.value}`);
+    }
+
+    // Función para actualizar estados existentes al cargar la página
+    function actualizarEstadosExistentes() {
+        const cantidadRecibidaInputs = document.querySelectorAll('input[id$="-cantidad_recibida"]');
+        
+        cantidadRecibidaInputs.forEach(input => {
+            if (input.value) {
+                actualizarEstadoDesdeCantidadRecibida(input);
+            }
+        });
+        
+        // También actualizar basado en aporte para registros que no tengan cantidad_recibida
+        const aporteInputs = document.querySelectorAll('input[id$="-aporte"]');
+        aporteInputs.forEach(input => {
+            const prefix = input.id.split('-aporte')[0];
+            const cantidadOrdInput = document.querySelector(`#${prefix}-cantidad_ord`);
+            const estadoItemSelect = document.querySelector(`#${prefix}-estado_item`);
+            
+            if (input.value && cantidadOrdInput && estadoItemSelect) {
+                const cantidadNecesaria = parseInt(cantidadOrdInput.value || 0, 10);
+                actualizarEstadoItem(input, cantidadNecesaria, estadoItemSelect);
+            }
+        });
+
+        // ACTUALIZAR ESTADO DE LA LISTA AL FINAL
+        actualizarEstadoLista();
+    }
+
+    // Función para configurar listeners de APORTE
+    function setupAporteListeners() {
+        // Escuchar cambios en todos los inputs de APORTE
         document.addEventListener('input', function(event) {
-            if (event.target.matches('input[id$="-cantidad_recibida"]')) {
+            if (event.target.matches('input[id$="-aporte"]')) {
                 const input = event.target;
-                const prefix = input.id.split('-cantidad_recibida')[0];
+                const prefix = input.id.split('-aporte')[0];
                 
                 const cantidadOrdInput = document.querySelector(`#${prefix}-cantidad_ord`);
                 const estadoItemSelect = document.querySelector(`#${prefix}-estado_item`);
@@ -142,9 +253,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // También escuchar eventos change para mayor compatibilidad
         document.addEventListener('change', function(event) {
-            if (event.target.matches('input[id$="-cantidad_recibida"]')) {
+            if (event.target.matches('input[id$="-aporte"]')) {
                 const input = event.target;
-                const prefix = input.id.split('-cantidad_recibida')[0];
+                const prefix = input.id.split('-aporte')[0];
                 
                 const cantidadOrdInput = document.querySelector(`#${prefix}-cantidad_ord`);
                 const estadoItemSelect = document.querySelector(`#${prefix}-estado_item`);
@@ -249,6 +360,34 @@ document.addEventListener("DOMContentLoaded", function() {
             }, 300);
         });
     }
+
+    // FUNCIÓN MEJORADA: Actualizar estado de lista cuando todos los items estén completos
+    function actualizarEstadoLista() {
+        const estadoListaSelect = document.querySelector('#id_estado'); 
+        if (!estadoListaSelect) return;
+
+        const estadosItem = document.querySelectorAll('select[id$="-estado_item"]');
+        if (estadosItem.length === 0) return;
+
+        // Verificar si TODOS los items están en 'completo' y no están vacíos
+        const itemsConValor = Array.from(estadosItem).filter(select => select.value !== '');
+        const todosCompletos = itemsConValor.length > 0 && 
+                              itemsConValor.every(select => select.value === 'completo');
+
+        console.log(`Items totales: ${estadosItem.length}, Items con valor: ${itemsConValor.length}, Todos completos: ${todosCompletos}`);
+
+        if (todosCompletos) {
+            estadoListaSelect.value = 'completa'; // CORREGIDO: 'completa' no 'completo'
+            console.log("✓ La lista completa pasó a COMPLETA porque todos los items están completos");
+
+            // Actualizar select2 si aplica
+            if (window.jQuery && window.jQuery.fn.select2) {
+                window.jQuery(estadoListaSelect).trigger('change.select2');
+            }
+        } else {
+            console.log("✗ La lista NO está completa - algunos items no están completos");
+        }
+    }
     
     // Obtener ID de lista de compra
     function getCurrentListaCompraId() {
@@ -274,88 +413,22 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
             });
+            
+            // ACTUALIZAR ESTADO DE LA LISTA AL INICIO
+            actualizarEstadoLista();
         }, 1000);
     }
-
-    function filtrarProductosPorListaCompra() {
-        const listaCompraId = getCurrentListaCompraId();
-        const productSelects = document.querySelectorAll('select[id$="-product"]');
-
-        if (!listaCompraId || listaCompraId === '') {
-            productSelects.forEach(select => {
-                select.innerHTML = '<option value="">Seleccione una lista de compra primero</option>';
-                select.disabled = true;
-            });
-            return;
-        }
-
-        productSelects.forEach(select => {
-            select.disabled = false;
-            // No borramos el valor guardado, lo mantenemos
-            const currentValue = select.value;
-            select.innerHTML = currentValue ? `<option value="${currentValue}">Cargando producto guardado...</option>` : '<option value="">Cargando productos...</option>';
-        });
-
-        const url = `/admin/Compras/listacompra/obtener_productos_por_lista/${listaCompraId}/`;
-
-        fetch(url, {
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Datos recibidos:', data);
-            productSelects.forEach(select => {
-                const currentValue = select.value;
-                // Solo reiniciamos opciones si la opción actual no existe en la lista nueva
-                select.innerHTML = '<option value="">---------</option>';
-                
-                data.forEach(producto => {
-                    const option = document.createElement('option');
-                    option.value = producto.id;
-                    option.textContent = `${producto.nombre} (Req: ${producto.cantidad_necesaria})`;
-                    option.setAttribute('data-cantidad', producto.cantidad_necesaria);
-                    
-                    // Mantener seleccionado el valor guardado
-                    if (currentValue == producto.id) {
-                        option.selected = true;
-                        autocompletarCantidadOrd(select, producto.cantidad_necesaria);
-                    }
-                    
-                    select.appendChild(option);
-                });
-
-                // Si el valor guardado no estaba en la lista, crear opción temporal
-                if (currentValue && !Array.from(select.options).some(o => o.value == currentValue)) {
-                    const opt = document.createElement('option');
-                    opt.value = currentValue;
-                    opt.textContent = 'Valor guardado';
-                    opt.selected = true;
-                    select.appendChild(opt);
-                }
-
-                // Actualizar Select2
-                if (window.jQuery && window.jQuery.fn.select2) {
-                    window.jQuery(select).trigger('change.select2');
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            productSelects.forEach(select => {
-                select.innerHTML = '<option value="">Error al cargar</option>';
-            });
-        });
-    }
-
     
     // Inicializar
     if (window.location.pathname.includes('/listacompra/')) {
         setTimeout(() => {
             filtrarProductosPorListaCompra();
             setupSelect2Listener();
-            setupCantidadRecibidaListeners(); // ← NUEVO: Configurar listeners para cantidad recibida
+            setupAporteListeners();
+            setupCantidadRecibidaListeners();
+            actualizarEstadosExistentes();
             forzarActualizacionInicial();
+            
         }, 100);
         
         // Observar nuevas filas
@@ -367,7 +440,12 @@ document.addEventListener("DOMContentLoaded", function() {
                             setTimeout(() => {
                                 filtrarProductosPorListaCompra();
                                 setupSelect2Listener();
-                                setupCantidadRecibidaListeners(); // ← NUEVO: También para nuevas filas
+                                setupAporteListeners();
+                                setupCantidadRecibidaListeners();
+                                actualizarEstadosExistentes();
+                                
+                                // ACTUALIZAR ESTADO DE LA LISTA CUANDO SE AÑADEN NUEVAS FILAS
+                                actualizarEstadoLista();
                             }, 200);
                         }
                     });

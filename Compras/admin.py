@@ -224,6 +224,7 @@ class ListaCInline(admin.StackedInline):
 class DetalleRecibCInline(admin.StackedInline):
     model = DetalleRecibido
     extra = 0
+    
     def has_add_permission(self, request, obj=None):
         # Solo permitir agregar si la orden existe y está marcada como 'recibida'
         if obj and obj.pk:
@@ -236,10 +237,11 @@ class DetalleRecibCInline(admin.StackedInline):
             return [f.name for f in self.model._meta.fields]
         return super().get_readonly_fields(request, obj)
     
-   
-    
     class Media:
-        js = ("js/filtrar_productos_por_orden.js",)
+        js = (
+            "js/filtrar_productos_por_orden.js",
+            "js/estado_inventario_material.js",  # AGREGAR ESTE JS
+        )
 
 @admin.register(ListaCompra)
 class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
