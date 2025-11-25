@@ -40,6 +40,15 @@ class InventarioMuebleAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     readonly_fields=('ultima_entrada', 'ultima_salida')
     list_filter = ('estado','ubicación')
 
+@admin.register(InventarioMateriale)
+class InventarioMaterialAdmin(PaginacionAdminMixin,admin.ModelAdmin):
+    form = InventarioForm
+    list_display = ("id_material","cantidad_disponible", "estado", "ubicación")
+    search_fields = ('id_material', 'ubicación')
+    readonly_fields=('ultima_entrada', 'ultima_salida')
+    list_filter = ('estado','ubicación')
+
+
 class DetalleCotizacionesInline(admin.StackedInline):
     model = DetalleCotizaciones
     extra = 0

@@ -203,19 +203,37 @@ class DetalleRecibido(models.Model):
         db_table = 'Detalle_recibido'
 
     def save(self, *args, **kwargs):
-        # Guardamos el detalle sin tocar estado_item (lo maneja JS)
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            # Guardar detalle primero
+            super().save(*args, **kwargs)
 
-        # Actualizar estado general de la lista
-        if self.orden:
-            detalles = DetalleRecibido.objects.filter(orden=self.orden)
-            if detalles.filter(estado_item=self.INCOMP).exists():
-                self.orden.estado = ListaCompra.INCOMPLETA
-            elif detalles.exists() and not detalles.filter(estado_item=self.INCOMP).exists():
-                self.orden.estado = ListaCompra.COMPLETA
-            else:
-                self.orden.estado = ListaCompra.PENDIENTE
-            self.orden.save()
+            # Actualizar inventario solo si hay cantidad recibida
+            if self.product and self.cantidad_recibida:
+                # Si existe inventario para este material y sucursal
+                inventario, created = InventarioMateriale.objects.get_or_create(
+                    id_material=self.product,
+                    ubicación=self.orden.sucursal if self.orden else None,
+                    defaults={
+                        'cantidad_disponible': 0,
+                        'ultima_entrada': timezone.now().date()
+                    }
+                )
+
+                # Sumar la cantidad recibida
+                inventario.cantidad_disponible = (inventario.cantidad_disponible or 0) + self.cantidad_recibida
+                inventario.ultima_entrada = timezone.now().date()
+                inventario.save()
+
+            # Actualizar estado general de la lista
+            if self.orden:
+                detalles = DetalleRecibido.objects.filter(orden=self.orden)
+                if detalles.filter(estado_item=self.INCOMP).exists():
+                    self.orden.estado = ListaCompra.INCOMPLETA
+                elif detalles.exists() and not detalles.filter(estado_item=self.INCOMP).exists():
+                    self.orden.estado = ListaCompra.COMPLETA
+                else:
+                    self.orden.estado = ListaCompra.PENDIENTE
+                self.orden.save()
 
 class HistorialPrecio(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -228,3 +246,17 @@ class HistorialPrecio(models.Model):
     class Meta:
         managed = False
         db_table = 'Historial_Precios'
+
+class InventarioMateriale(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    id_material = models.ForeignKey(Materiale, models.DO_NOTHING, db_column='ID_Material')  # Field name made lowercase.
+    cantidad_disponible = models.BigIntegerField(db_column='Cantidad_Disponible')  # Field name made lowercase.
+    estado = models.ForeignKey(Estados, models.DO_NOTHING, db_column='Estado', blank=True, null=True)  # Field name made lowercase.
+    ubicación = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='ubicación', blank=True, null=True)
+    ultima_entrada = models.DateField(db_column='ultima entrada', blank=True, null=True)  # Field renamed to remove unsuitable characters.
+    ultima_salida = models.DateField(db_column='ultima salida', blank=True, null=True)  # Field renamed to remove unsuitable characters.
+    
+
+    class Meta:
+        managed = False
+        db_table = 'Inventario_Materiales'
