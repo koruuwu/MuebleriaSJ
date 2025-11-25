@@ -4,7 +4,7 @@ from .models import *
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
 from proyecto.utils.admin_utils import AdminConImagenMixin, PaginacionAdminMixin, UniqueFieldAdminMixin
-
+from Compras.models import HistorialPrecio
 #------------FORMULARIOS ARRIBA-SOFIA CASTRO----------------
 class ImagenForm(ValidacionesBaseForm):
     archivo_temp = forms.FileField(required=False, label="Subir imagen")
@@ -123,13 +123,21 @@ class MaterialProveedorInline(admin.StackedInline):
     def has_add_permission(self, request, obj=None):
         return obj is not None  
     
+class HistorialPInline(admin.TabularInline):
+    model = HistorialPrecio
+    extra = 0  
+    def has_add_permission(self, request, obj=None):
+        return False
+    def has_change_permission(self, request, obj = ...):
+        return False
+
 @admin.register(Proveedore)
 class ProveedoreAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     form= ProveForm
     list_display = ("compañia","nombre", "telefono", "estado")
     search_fields = ('nombre', 'compañia')
     list_filter = ('estado__tipo','materialproveedore__material')
-    inlines=[MaterialProveedorInline]
+    inlines=[MaterialProveedorInline, HistorialPInline]
     '''fieldsets = [
         ("Información General", {"fields": ("nombre", "telefono")}),
         ("Estado", {"fields": ("estado",)}),

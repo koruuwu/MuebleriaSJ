@@ -7,6 +7,7 @@ from datetime import timedelta
 from django.urls import path
 from django.http import JsonResponse
 from django import forms
+from django.utils import timezone
 
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
@@ -59,7 +60,7 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     
   
     def save_model(self, request, obj, form, change):
-        from django.utils import timezone
+       
 
         if not change:  # Solo al crear
             obj.fecha_registro = timezone.now()
@@ -94,7 +95,10 @@ class RequerimientoForm(forms.ModelForm):
         model = RequerimientoMateriale
         fields = "__all__"
 
+    
+
     def __init__(self, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
         data = self.data or self.initial
 
@@ -155,11 +159,11 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
 
     def get_proveedores_por_material(self, request, material_id):
         if material_id == 0:
-            proveedores = Proveedore.objects.all().values("id", "nombre")
+            proveedores = Proveedore.objects.all().values("id", "compania")
         else:
             proveedores = Proveedore.objects.filter(
                 materialproveedore__material=material_id
-            ).values("id", "nombre")
+            ).values("id", "compania")
         return JsonResponse(list(proveedores), safe=False)
     
     def obtener_precio_material(self, request, material_id, proveedor_id):

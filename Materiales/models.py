@@ -63,7 +63,7 @@ class Proveedore(models.Model):
     estado = models.ForeignKey('EstadosPersonas', models.DO_NOTHING, db_column='Estado', blank=False, null=False, default=1)  
     #ForeignKey, el valor de default debe ser la clave primaria (ID) de la fila a la que quieres referenciar, no el texto-sofia castro
     def __str__(self):
-        return self.nombre
+        return self.compañia
 
     class Meta:
         managed = False

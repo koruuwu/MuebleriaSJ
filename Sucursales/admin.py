@@ -16,10 +16,20 @@ class SucursaleForm(ValidacionesBaseForm):
             'direccion': WidgetsRegulares.direccion(),
         }
 
+class CaiInline(admin.StackedInline):
+    model = Cai
+    extra = 0
+
+class CajaInline(admin.StackedInline):
+    model = Caja
+    extra = 0
+
+
 @admin.register(Sucursale)
 class SucursalesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     form = SucursaleForm
     search_fields = ('id', 'nombre', 'direccion', 'telefono')
     list_display = ('id', 'nombre', 'direccion', 'telefono', 'fecha_registro')
     list_display_links = ('id', 'nombre')
-    readonly_fields = ()
+    readonly_fields = ('fecha_registro',)
+    inlines=[CaiInline, CajaInline,]
