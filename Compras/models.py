@@ -174,13 +174,19 @@ class RequerimientoMateriale(models.Model):
         db_table = 'Requerimiento_Material'
 
 class DetalleRecibido(models.Model):
+    COMP = 'completo'
+    INCOMP = 'incompleto'
+
+    EI_CHOICES = [
+        (COMP, 'Completo'),
+        (INCOMP, 'Incompleto'),
+    ]
     id = models.BigAutoField(primary_key=True)
     orden = models.ForeignKey('ListaCompra', models.DO_NOTHING, blank=True, null=True)
     product = models.ForeignKey(Materiale, models.DO_NOTHING, blank=True, null=True)
     cantidad_ord = models.BigIntegerField(blank=True, null=True)
     cantidad_recibida = models.BigIntegerField(blank=True, null=True)
-    precio_unitario = models.FloatField(blank=True, null=True)
-    estado_item = models.CharField(blank=True, null=True)
+    estado_item = models.CharField(blank=True, null=True, choices=EI_CHOICES)
 
     class Meta:
         managed = False

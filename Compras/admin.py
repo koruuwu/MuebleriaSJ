@@ -138,14 +138,39 @@ class ListaCInline(admin.StackedInline):
     class Media:
         js = ("js/filtro_material_proveedor.js", "js/requerimiento_precio.js",)
  
-
+class DetalleRecibCInline(admin.StackedInline):
+    model = DetalleRecibido
+    extra = 0
+    
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        
+        # Filtrar productos solo si hay una lista de compra existente
+        if obj and obj.pk:
+            # Obtener los materiales de los requerimientos de esta lista
+            materiales_ids = RequerimientoMateriale.objects.filter(
+                id_lista=obj
+            ).values_list('material_id', flat=True)
+            
+            # Aplicar el filtro al campo product
+            formset.form.base_fields['product'].queryset = Materiale.objects.filter(
+                id__in=materiales_ids
+            )
+        else:
+            # Si es nueva lista, no mostrar materiales hasta que se guarden requerimientos
+            formset.form.base_fields['product'].queryset = Materiale.objects.none()
+            
+        return formset
+    
+    class Media:
+        js = ("js/filtrar_productos_por_orden.js",)
 
 @admin.register(ListaCompra)
 class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     list_display = ("id", "fecha_solicitud", "prioridad", "estado")
     readonly_fields = ("fecha_solicitud",)
     list_filter = ('estado','prioridad',)
-    inlines = [ListaCInline]
+    inlines = [ListaCInline, DetalleRecibCInline]
 
     # Vistas para filtrar
     def get_materiales_por_proveedor(self, request, proveedor_id):
@@ -159,11 +184,11 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
 
     def get_proveedores_por_material(self, request, material_id):
         if material_id == 0:
-            proveedores = Proveedore.objects.all().values("id", "compania")
+            proveedores = Proveedore.objects.all().values("id", "compañia")
         else:
             proveedores = Proveedore.objects.filter(
                 materialproveedore__material=material_id
-            ).values("id", "compania")
+            ).values("id", "compañia")
         return JsonResponse(list(proveedores), safe=False)
     
     def obtener_precio_material(self, request, material_id, proveedor_id):
@@ -179,6 +204,29 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
             import traceback; traceback.print_exc()
             precio = 0
         return JsonResponse({"precio": precio})
+    
+    def obtener_productos_por_lista(self, request, lista_id):
+        """Obtener productos filtrados por lista de compra con cantidad necesaria"""
+        try:
+            # Obtener requerimientos con información de cantidad
+            requerimientos = RequerimientoMateriale.objects.filter(
+                id_lista_id=lista_id
+            ).select_related('material')
+            
+            productos_data = []
+            for req in requerimientos:
+                productos_data.append({
+                    'id': req.material.id,
+                    'nombre': req.material.nombre,
+                    'cantidad_necesaria': req.cantidad_necesaria,
+                    'requerimiento_id': req.id  # Por si lo necesitas después
+                })
+            
+            return JsonResponse(productos_data, safe=False)
+        except Exception as e:
+            print(f"Error en obtener_productos_por_lista: {e}")
+            return JsonResponse([], safe=False)
+    
 
 
 
@@ -200,6 +248,16 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
                 "obtener_precio_material/<int:material_id>/<int:proveedor_id>/",
                 self.admin_site.admin_view(self.obtener_precio_material),
                 name="obtener_precio_material",
+            ),
+            path(
+                "obtener_productos_por_lista/<int:lista_id>/",
+                self.admin_site.admin_view(self.obtener_productos_por_lista),
+                name="obtener_productos_por_lista",
+            ),
+            path(
+                "obtener_productos_por_lista/<int:lista_id>/",
+                self.admin_site.admin_view(self.obtener_productos_por_lista),
+                name="obtener_productos_por_lista",
             ),
         ]
         return custom + urls

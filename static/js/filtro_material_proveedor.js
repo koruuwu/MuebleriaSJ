@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 .then(data => {
                     proveedorSelect.innerHTML = '<option value="">---------</option>';
                     data.forEach(item => {
-                        proveedorSelect.innerHTML += `<option value="${item.id}">${item.compania}</option>`;
+                        proveedorSelect.innerHTML += `<option value="${item.id}">${item.compañia}</option>`;
                     });
 
                     // si hay datos, seleccionar el primero
