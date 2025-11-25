@@ -8,13 +8,13 @@ from django.urls import path
 from django.http import JsonResponse
 from django import forms
 from django.utils import timezone
-
+from Materiales.models import Materiale
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
         fields = "__all__"
         model = InventarioMueble
         widgets = {
-            'cantidad_disponible': WidgetsRegulares.numero(4, allow_zero=False, placeholder="Ej: 10"),
+            'cantidad_disponible': WidgetsRegulares.numero(4, allow_zero=True, placeholder="Ej: 10"),
         }
     def clean_cantidad_disponible(self):
         numero = self.cleaned_data.get('cantidad_disponible')
@@ -40,13 +40,66 @@ class InventarioMuebleAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     readonly_fields=('ultima_entrada', 'ultima_salida')
     list_filter = ('estado','ubicación')
 
+
+class InventarioMForm(ValidacionesBaseForm):
+    class Meta:
+        fields = "__all__"
+        model = InventarioMateriale
+        
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad = cleaned_data.get('cantidad_disponible')
+        material = cleaned_data.get('id_material')
+        
+        if cantidad is not None and material:
+            # Validar que no exceda stock máximo si es necesario
+            stock_maximo = material.stock_maximo
+            if stock_maximo and cantidad > stock_maximo:
+                self.add_error('cantidad_disponible', 
+                             f'La cantidad no puede exceder el stock máximo de {stock_maximo}')
+        
+        return cleaned_data
+
+
 @admin.register(InventarioMateriale)
-class InventarioMaterialAdmin(PaginacionAdminMixin,admin.ModelAdmin):
-    form = InventarioForm
-    list_display = ("id_material","cantidad_disponible", "estado", "ubicación")
-    search_fields = ('id_material', 'ubicación')
-    readonly_fields=('ultima_entrada', 'ultima_salida')
-    list_filter = ('estado','ubicación')
+class InventarioMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+    form = InventarioMForm
+    list_display = ("id_material", "cantidad_disponible", "estado", "ubicación", "stock_minimo_info")
+    search_fields = ('id_material__nombre', 'ubicación__nombre')
+    readonly_fields = ('ultima_entrada', 'ultima_salida')
+    list_filter = ('estado', 'ubicación')
+    
+    def stock_minimo_info(self, obj):
+        return f"Mín: {obj.id_material.stock_minimo}"
+    stock_minimo_info.short_description = "Stock Mínimo"
+
+    def obtener_info_material(self, request, material_id):
+        try:
+            material = Materiale.objects.get(id=material_id)
+            return JsonResponse({
+                'stock_minimo': material.stock_minimo,
+                'stock_maximo': material.stock_maximo,
+                'descontinuado': getattr(material, 'descontinuado', False),
+                'nombre': material.nombre
+            })
+        except Materiale.DoesNotExist:
+            return JsonResponse({'error': 'Material no encontrado'}, status=404)
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "obtener_info_material/<int:material_id>/",
+                self.admin_site.admin_view(self.obtener_info_material),
+                name="inventario_obtener_info_material",
+            ),
+        ]
+        return custom_urls + urls
+    
+    class Media:
+        js = ("js/estado_inventario_material.js",)
+
 
 
 class DetalleCotizacionesInline(admin.StackedInline):
@@ -139,21 +192,26 @@ class RequerimientoForm(forms.ModelForm):
                     materialproveedore__id_proveedor=self.instance.proveedor
                 ).distinct()
 
-
-
 class ListaCInline(admin.StackedInline):
     form = RequerimientoForm
     model = RequerimientoMateriale
     extra = 0
+
     def get_readonly_fields(self, request, obj=None):
-        # Si la orden está completa, todos los campos del inline son readonly
-        if obj and obj.pk and obj.estado == 'completa':
+        """
+        Si la orden está completa, recibida o incompleta
+        todos los campos del inline se vuelven de solo lectura.
+        """
+        if obj and obj.pk and obj.estado in ['completa', 'recibida', 'incompleta']:
             return [f.name for f in self.model._meta.fields]
         return super().get_readonly_fields(request, obj)
 
     def has_add_permission(self, request, obj=None):
-        # No permitir agregar si la orden está completa
-        if obj and obj.pk and obj.estado == 'completa':
+        """
+        No permitir agregar nuevos materiales si la orden está
+        completa, recibida o incompleta.
+        """
+        if obj and obj.pk and obj.estado in ['completa', 'recibida', 'incompleta']:
             return False
         return super().has_add_permission(request, obj)
 
