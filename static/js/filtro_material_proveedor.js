@@ -16,27 +16,25 @@ document.addEventListener("DOMContentLoaded", function () {
     function conectarFila(fila) {
         const materialSelect = fila.querySelector('select[name$="material"]');
         const proveedorSelect = fila.querySelector('select[name$="proveedor"]');
-        
 
         if (!materialSelect || !proveedorSelect) return;
+
         function actualizarProveedores() {
             const materialId = materialSelect.value;
-
-            // si no hay material seleccionado, traer todos los proveedores
             const url = materialId
                 ? `${adminBase}filtrar_proveedores/${materialId}/`
-                : `${adminBase}filtrar_proveedores/0/`; // 0 indica "todos"
+                : `${adminBase}filtrar_proveedores/0/`;
 
             fetch(url)
                 .then(r => r.json())
                 .then(data => {
+                    const currentValue = proveedorSelect.value; // guardamos el valor seleccionado
                     proveedorSelect.innerHTML = '<option value="">---------</option>';
                     data.forEach(item => {
                         proveedorSelect.innerHTML += `<option value="${item.id}">${item.compañia}</option>`;
                     });
-
-                    // si hay datos, seleccionar el primero
-                    if (data.length > 0) proveedorSelect.value = data[0].id;
+                    // restaurar el valor seleccionado si existe
+                    if (currentValue) proveedorSelect.value = currentValue;
 
                     if (window.jQuery && window.jQuery.fn.select2) {
                         window.jQuery(proveedorSelect).trigger("change.select2");
@@ -46,20 +44,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
         function actualizarMateriales() {
             const proveedorId = proveedorSelect.value;
-
             const url = proveedorId
                 ? `${adminBase}filtrar_materiales/${proveedorId}/`
-                : `${adminBase}filtrar_materiales/0/`; // 0 indica "todos"
+                : `${adminBase}filtrar_materiales/0/`;
 
             fetch(url)
                 .then(r => r.json())
                 .then(data => {
+                    const currentValue = materialSelect.value; // guardamos el valor seleccionado
                     materialSelect.innerHTML = '<option value="">---------</option>';
                     data.forEach(item => {
                         materialSelect.innerHTML += `<option value="${item.id}">${item.nombre}</option>`;
                     });
-
-                    if (data.length > 0) materialSelect.value = data[0].id;
+                    // restaurar el valor seleccionado si existe
+                    if (currentValue) materialSelect.value = currentValue;
 
                     if (window.jQuery && window.jQuery.fn.select2) {
                         window.jQuery(materialSelect).trigger("change.select2");
