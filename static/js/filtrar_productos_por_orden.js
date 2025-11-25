@@ -84,24 +84,30 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Función para actualizar el estado del ítem
-    function actualizarEstadoItem(cantidadRecibidaInput, cantidadNecesaria, estadoItemSelect) {
+   function actualizarEstadoItem(cantidadRecibidaInput, cantidadNecesaria, estadoItemSelect) {
         const cantidadRecibida = parseInt(cantidadRecibidaInput.value || 0, 10);
 
-        if (cantidadRecibida === cantidadNecesaria) {
-            estadoItemSelect.value = 'completo';
-        } else if (cantidadRecibida > cantidadNecesaria) {
-            estadoItemSelect.value = 'excedido';
-        } else {
-            estadoItemSelect.value = 'incompleto';
-        }
+        // Solo actualizar si hay cambio real o si nunca se ha marcado
+        if (!estadoItemSelect.value || cantidadRecibidaInput.dataset.lastValue != cantidadRecibida) {
+            if (cantidadRecibida === cantidadNecesaria) {
+                estadoItemSelect.value = 'completo';
+            } else if (cantidadRecibida > cantidadNecesaria) {
+                estadoItemSelect.value = 'excedido';
+            } else {
+                estadoItemSelect.value = 'incompleto';
+            }
 
-        // Actualizar Select2 si aplica
-        if (window.jQuery && window.jQuery.fn.select2) {
-            window.jQuery(estadoItemSelect).trigger('change.select2');
-        }
+            // Guardar valor actual para no recalcular sin necesidad
+            cantidadRecibidaInput.dataset.lastValue = cantidadRecibida;
 
-        console.log(`✓ Estado actualizado: ${cantidadRecibida}/${cantidadNecesaria} = ${estadoItemSelect.value}`);
+            // Actualizar Select2 si aplica
+            if (window.jQuery && window.jQuery.fn.select2) {
+                window.jQuery(estadoItemSelect).trigger('change.select2');
+            }
+        }
     }
+
+
 
     // Función para configurar listeners de cantidad recibida
     function setupCantidadRecibidaListeners() {

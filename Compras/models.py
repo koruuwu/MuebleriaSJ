@@ -5,6 +5,7 @@ from clientes.models import Cliente
 from Materiales.models import Materiale, Proveedore, MaterialProveedore
 from django.utils import timezone
 from django.db import transaction
+from Sucursales.models import Sucursale
 class InventarioMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
     id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
@@ -89,16 +90,22 @@ class ListaCompra(models.Model):
     PENDIENTE = 'pendiente'
     APROBADA = 'aprobada'
     RECHAZADA='rechazada'
+    INCOMPLETA='incompleta'
+    COMPLETA='completa'
+    
 
     S_CHOICES = [
         (PENDIENTE, 'Pendiente'),
         (APROBADA, 'Aprobada'),
         (RECHAZADA, 'Rechazada'),
+        (INCOMPLETA, 'Incompleta'),
+        (COMPLETA, 'Completa'),
     ]
  
 
     id = models.BigAutoField(primary_key=True)
     fecha_solicitud = models.DateTimeField(db_column='Fecha_Solicitud', auto_now_add=True)  # Field name made lowercase.
+    sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='sucursal', blank=True, null=True)
     prioridad = models.CharField(db_column='Prioridad', choices=P_CHOICES, default=1)  # Field name made lowercase.
     estado = models.CharField(db_column='Estado', choices=S_CHOICES, default=3)  # Field name made lowercase.
 
@@ -176,12 +183,12 @@ class RequerimientoMateriale(models.Model):
 class DetalleRecibido(models.Model):
     COMP = 'completo'
     INCOMP = 'incompleto'
-    EX ='excedido'
+    EXEDIDO ='excedido'
 
     EI_CHOICES = [
         (COMP, 'Completo'),
         (INCOMP, 'Incompleto'),
-        (EX, 'Exedido'),
+        (EXEDIDO, 'Exedido'),
 
     ]
     id = models.BigAutoField(primary_key=True)
@@ -194,6 +201,21 @@ class DetalleRecibido(models.Model):
     class Meta:
         managed = False
         db_table = 'Detalle_recibido'
+
+    def save(self, *args, **kwargs):
+        # Guardamos el detalle sin tocar estado_item (lo maneja JS)
+        super().save(*args, **kwargs)
+
+        # Actualizar estado general de la lista
+        if self.orden:
+            detalles = DetalleRecibido.objects.filter(orden=self.orden)
+            if detalles.filter(estado_item=self.INCOMP).exists():
+                self.orden.estado = ListaCompra.INCOMPLETA
+            elif detalles.exists() and not detalles.filter(estado_item=self.INCOMP).exists():
+                self.orden.estado = ListaCompra.COMPLETA
+            else:
+                self.orden.estado = ListaCompra.PENDIENTE
+            self.orden.save()
 
 class HistorialPrecio(models.Model):
     id = models.BigAutoField(primary_key=True)
