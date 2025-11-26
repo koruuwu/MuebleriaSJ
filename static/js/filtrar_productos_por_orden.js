@@ -1,5 +1,11 @@
 document.addEventListener("DOMContentLoaded", function() {
     // Función para filtrar productos basado en la lista de compra
+    document.querySelectorAll('input[id$="-cantidad_recibida"]').forEach(input => {
+        // Guardamos el valor original de la base de datos en data-base-value
+        input.dataset.baseValue = input.value || 0;
+    });
+
+
     function filtrarProductosPorListaCompra() {
         const listaCompraId = getCurrentListaCompraId();
         const productSelects = document.querySelectorAll('select[id$="-product"]');
@@ -72,6 +78,7 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         });
     }
+    
     
     // Función para autocompletar cantidad_ord (MODIFICADA para usar APORTE)
     function autocompletarCantidadOrd(productSelect, cantidadNecesaria) {
@@ -161,64 +168,39 @@ document.addEventListener("DOMContentLoaded", function() {
     function actualizarEstadoItem(aporteInput, cantidadNecesaria, estadoItemSelect) {
         const aporte = parseInt(aporteInput.value || 0, 10);
         const prefix = aporteInput.id.split('-aporte')[0];
-        
-        // Buscar cantidad_recibida actual
+
         const cantidadRecibidaInput = document.querySelector(`#${prefix}-cantidad_recibida`);
-        const cantidadRecibida = cantidadRecibidaInput ? parseInt(cantidadRecibidaInput.value || 0, 10) : 0;
-        
-        console.log(`Actualizando estado - Aporte: ${aporte}, CantRecibida: ${cantidadRecibida}, CantNecesaria: ${cantidadNecesaria}`);
+        let cantidadRecibidaBase = cantidadRecibidaInput ? parseInt(cantidadRecibidaInput.dataset.baseValue || 0, 10) : 0;
 
-        // PRIORIDAD: Si cantidad_recibida está disponible, usarla para el cálculo
-        const cantidadEfectiva = cantidadRecibida > 0 ? cantidadRecibida : aporte;
+        // 🔥 NUEVO: cantidad recibida = cantidad en DB + aporte
+        const nuevaCantidadRecibida = cantidadRecibidaBase + aporte;
 
-        if (cantidadEfectiva === cantidadNecesaria) {
+        if (cantidadRecibidaInput) {
+            cantidadRecibidaInput.value = nuevaCantidadRecibida;
+            console.log(`Cantidad recibida actualizada: ${nuevaCantidadRecibida}`);
+
+            // Disparar eventos para que cualquier listener se actualice
+            cantidadRecibidaInput.dispatchEvent(new Event('input', { bubbles: true }));
+            cantidadRecibidaInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // Determinar estado del item
+        if (nuevaCantidadRecibida === cantidadNecesaria) {
             estadoItemSelect.value = 'completo';
-        } else if (cantidadEfectiva > cantidadNecesaria) {
+        } else if (nuevaCantidadRecibida > cantidadNecesaria) {
             estadoItemSelect.value = 'excedido';
         } else {
             estadoItemSelect.value = 'incompleto';
         }
 
-        // Guardar valor actual para no recalcular sin necesidad
-        aporteInput.dataset.lastValue = aporte;
-
-        // Actualizar Select2 si aplica
         if (window.jQuery && window.jQuery.fn.select2) {
             window.jQuery(estadoItemSelect).trigger('change.select2');
         }
-        
-        // ACTUALIZAR ESTADO DE LA LISTA
+
         actualizarEstadoLista();
-        
         console.log(`✓ Estado actualizado a: ${estadoItemSelect.value}`);
     }
 
-    // Función para actualizar estados existentes al cargar la página
-    function actualizarEstadosExistentes() {
-        const cantidadRecibidaInputs = document.querySelectorAll('input[id$="-cantidad_recibida"]');
-        
-        cantidadRecibidaInputs.forEach(input => {
-            if (input.value) {
-                actualizarEstadoDesdeCantidadRecibida(input);
-            }
-        });
-        
-        // También actualizar basado en aporte para registros que no tengan cantidad_recibida
-        const aporteInputs = document.querySelectorAll('input[id$="-aporte"]');
-        aporteInputs.forEach(input => {
-            const prefix = input.id.split('-aporte')[0];
-            const cantidadOrdInput = document.querySelector(`#${prefix}-cantidad_ord`);
-            const estadoItemSelect = document.querySelector(`#${prefix}-estado_item`);
-            
-            if (input.value && cantidadOrdInput && estadoItemSelect) {
-                const cantidadNecesaria = parseInt(cantidadOrdInput.value || 0, 10);
-                actualizarEstadoItem(input, cantidadNecesaria, estadoItemSelect);
-            }
-        });
-
-        // ACTUALIZAR ESTADO DE LA LISTA AL FINAL
-        actualizarEstadoLista();
-    }
 
     // Función para configurar listeners de APORTE
     function setupAporteListeners() {
