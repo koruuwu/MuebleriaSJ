@@ -107,9 +107,20 @@ class ListaCompra(models.Model):
 
     id = models.BigAutoField(primary_key=True)
     fecha_solicitud = models.DateTimeField(db_column='Fecha_Solicitud', auto_now_add=True)  # Field name made lowercase.
+    fecha_entrega = models.DateTimeField(db_column='Fecha_Entrega', blank=True, null=True, verbose_name="Fecha Entrega Completa")  # Field name made lowercase. 
     sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='sucursal', blank=True, null=True)
     prioridad = models.CharField(db_column='Prioridad', choices=P_CHOICES, default=1)  # Field name made lowercase.
     estado = models.CharField(db_column='Estado', choices=S_CHOICES, default=3)  # Field name made lowercase.
+
+   
+    def save(self, *args, **kwargs):
+        # Si el estado es COMPLETA y fecha_recibido está vacío, guardamos la fecha actual
+        if self.estado == self.COMPLETA:
+            self.fecha_entrega = timezone.now()
+        else:
+            # Si no está completa, dejamos el campo vacío
+            self.fecha_entrega = None
+        super().save(*args, **kwargs)
 
     class Meta:
         managed = False

@@ -246,7 +246,7 @@ class DetalleRecibCInline(admin.StackedInline):
 @admin.register(ListaCompra)
 class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     list_display = ("id", "fecha_solicitud", "prioridad", "estado")
-    readonly_fields = ("fecha_solicitud",)
+    readonly_fields = ("fecha_solicitud","fecha_entrega")
     list_filter = ('estado','prioridad',)
     inlines = [ListaCInline, DetalleRecibCInline]
     def get_readonly_fields(self, request, obj=None):

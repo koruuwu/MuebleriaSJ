@@ -1,9 +1,15 @@
 document.addEventListener("DOMContentLoaded", function() {
     // Función para filtrar productos basado en la lista de compra
-    document.querySelectorAll('input[id$="-cantidad_recibida"]').forEach(input => {
-        // Guardamos el valor original de la base de datos en data-base-value
-        input.dataset.baseValue = input.value || 0;
-    });
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            document.querySelectorAll('input[id$="-cantidad_recibida"]').forEach(input => {
+                if (input.dataset.visualValue) {
+                    input.value = input.dataset.visualValue;
+                }
+            });
+        });
+    }
 
 
     function filtrarProductosPorListaCompra() {
@@ -172,16 +178,22 @@ document.addEventListener("DOMContentLoaded", function() {
         const cantidadRecibidaInput = document.querySelector(`#${prefix}-cantidad_recibida`);
         let cantidadRecibidaBase = cantidadRecibidaInput ? parseInt(cantidadRecibidaInput.dataset.baseValue || 0, 10) : 0;
 
-        // 🔥 NUEVO: cantidad recibida = cantidad en DB + aporte
+        // Nueva cantidad recibida = base + aporte
         const nuevaCantidadRecibida = cantidadRecibidaBase + aporte;
 
         if (cantidadRecibidaInput) {
-            cantidadRecibidaInput.value = nuevaCantidadRecibida;
-            console.log(`Cantidad recibida actualizada: ${nuevaCantidadRecibida}`);
+            // Solo mostrar visualmente, NO modificar value
+            cantidadRecibidaInput.dataset.visualValue = nuevaCantidadRecibida;
 
-            // Disparar eventos para que cualquier listener se actualice
-            cantidadRecibidaInput.dispatchEvent(new Event('input', { bubbles: true }));
-            cantidadRecibidaInput.dispatchEvent(new Event('change', { bubbles: true }));
+            // Mostrar visualmente en el input con un texto temporal
+            cantidadRecibidaInput.placeholder = nuevaCantidadRecibida; // ❌ solo visual
+
+            // Guardar baseValue si aún no existe
+            if (!cantidadRecibidaInput.dataset.baseValue) {
+                cantidadRecibidaInput.dataset.baseValue = cantidadRecibidaInput.value || 0;
+            }
+
+            console.log(`Cantidad recibida visual: ${nuevaCantidadRecibida}`);
         }
 
         // Determinar estado del item
@@ -200,6 +212,7 @@ document.addEventListener("DOMContentLoaded", function() {
         actualizarEstadoLista();
         console.log(`✓ Estado actualizado a: ${estadoItemSelect.value}`);
     }
+
 
 
     // Función para configurar listeners de APORTE
