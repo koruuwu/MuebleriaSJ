@@ -218,19 +218,17 @@ class DetalleRecibido(models.Model):
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            # Si hay aporte, actualizar cantidad_recibida
-            if self.aporte is not None and self.aporte > 0:
-                if not self.cantidad_recibida:
-                    self.cantidad_recibida = self.aporte
-                else:
-                    self.cantidad_recibida += self.aporte
-            
-            # Guardar el detalle primero
+            aporte_actual = self.aporte or 0
+
+            #Actualizar cantidad_recibida
+            if aporte_actual > 0:
+                self.cantidad_recibida = (self.cantidad_recibida or 0) + aporte_actual
+
+            #Guardar primero
             super().save(*args, **kwargs)
 
-            # Actualizar inventario solo si hay APORTE
-            if self.product and self.aporte and self.aporte > 0:
-                # Si existe inventario para este material y sucursal
+            # Actualizar inventario
+            if self.product and aporte_actual > 0:
                 inventario, created = InventarioMateriale.objects.get_or_create(
                     id_material=self.product,
                     ubicación=self.orden.sucursal if self.orden else None,
@@ -240,17 +238,23 @@ class DetalleRecibido(models.Model):
                     }
                 )
 
-                # Sumar el APORTE al inventario
-                inventario.cantidad_disponible = (inventario.cantidad_disponible or 0) + self.aporte
+                inventario.cantidad_disponible = (
+                    inventario.cantidad_disponible or 0
+                ) + aporte_actual
+
                 inventario.ultima_entrada = timezone.now().date()
-                
-                # ACTUALIZAR ESTADO AUTOMÁTICAMENTE
+
                 inventario.estado = self.calcular_estado_automatico(
-                    inventario.cantidad_disponible, 
+                    inventario.cantidad_disponible,
                     self.product
                 )
-                
+
                 inventario.save()
+
+            #RESET DEFINITIVO DEL APORTE
+            self.aporte = 0
+            super().save(update_fields=['aporte'])
+
 
             # Actualizar estado general de la lista
 

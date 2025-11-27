@@ -230,6 +230,18 @@ class ListaCInline(admin.StackedInline):
 class DetalleRecibCInline(admin.StackedInline):
     model = DetalleRecibido
     extra = 0
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj:
+            form.base_fields['aporte'].initial = 0  # Siempre iniciar en 0
+        return form
+
+    def get_changeform_initial_data(self, request):
+        data = super().get_changeform_initial_data(request)
+        data['aporte'] = 0  # Forzar aporte = 0 después de guardar
+        return data
+
+
     
     def has_add_permission(self, request, obj=None):
         # Solo permitir agregar si la orden existe y está marcada como 'recibida'

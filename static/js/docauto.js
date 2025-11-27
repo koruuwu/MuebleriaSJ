@@ -19,28 +19,15 @@ document.addEventListener("DOMContentLoaded", function() {
     // ========== SISTEMA DE COMENTARIOS PARA CANTIDAD ==========
     function inicializarSistemaCantidad() {
         document.querySelectorAll('input[id$="-cantidad_recibida"]').forEach(input => {
-            if (!input.dataset.baseValue) input.dataset.baseValue = input.value || 0;
-            input.readOnly = true;
-
-            const prefix = input.id.replace('-cantidad_recibida', '');
-            const aporteInput = document.querySelector(`#${prefix}-aporte`);
-
-            function actualizarVisual() {
-                const base = parseInt(input.dataset.baseValue || 0, 10);
-                const aporte = parseInt(aporteInput?.value || 0, 10);
-                const total = base + aporte;
-                input.placeholder = total;
-                input.dataset.visualValue = total;
-                crearComentarioCantidad(prefix);
-                actualizarComentarioCantidad(prefix);
-
+            if (!input.dataset.baseValue) {
+                input.dataset.baseValue = input.value || 0;
             }
-
-            aporteInput?.addEventListener('input', actualizarVisual);
-            actualizarVisual();
+            const prefix = getPrefixFromId(input.id, '-cantidad_recibida');
+            crearComentarioCantidad(prefix);
+            actualizarComentarioCantidad(prefix);
+            actualizarVisualCantidadRecibida(prefix);
         });
     }
-    
 
     function crearComentarioCantidad(prefix) {
         const input = document.querySelector(`#${prefix}-cantidad_recibida`);
@@ -73,17 +60,13 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!cantidadRecibidaInput) return;
 
         const base = parseInt(cantidadRecibidaInput.dataset.baseValue || 0, 10);
-
-        // 🚫 SI ESTAMOS CARGANDO LA PÁGINA → NO SUMAR APORTE
-      
-
         const aporte = parseInt(aporteInput?.value || 0, 10);
         const visual = base + aporte;
 
         cantidadRecibidaInput.dataset.visualValue = visual;
         cantidadRecibidaInput.placeholder = visual;
+        actualizarComentarioCantidad(prefix);
     }
-
 
     // ========== FILTRADO DE PRODUCTOS ==========
     function filtrarProductosPorListaCompra() {
@@ -162,8 +145,11 @@ document.addEventListener("DOMContentLoaded", function() {
             cantidadOrdInput.value = cantidadNecesaria;
             cantidadOrdInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
-     
 
+        if (aporteInput && !aporteInput.value) {
+            aporteInput.value = cantidadNecesaria;
+            aporteInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
         if (aporteInput && estadoItemSelect && cantidadNecesaria > 0) {
             actualizarEstadoItem(prefix, cantidadNecesaria);
@@ -202,8 +188,6 @@ document.addEventListener("DOMContentLoaded", function() {
         actualizarComentarioCantidad(prefix);
     }
 
-    
-
     function actualizarEstadoLista() {
         const estadoListaSelect = document.querySelector('#id_estado');
         const estadosItem = document.querySelectorAll('select[id$="-estado_item"]');
@@ -224,99 +208,65 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // ========== EVENT LISTENERS SIMPLIFICADOS ==========
     function setupEventListeners() {
-        document.querySelectorAll('input[name="_save"], input[name="_continue"], input[name="_addanother"]').forEach(btn => {
-            btn.addEventListener('click', function() {
+        // Listener único para el formulario
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function() {
                 document.querySelectorAll('input[id$="-cantidad_recibida"]').forEach(input => {
-                    const prefix = input.id.replace('-cantidad_recibida', '');
-                    const aporteInput = document.querySelector(`#${prefix}-aporte`);
-
-                    const base = parseInt(input.dataset.baseValue || 0, 10);
-                    const aporte = parseInt(aporteInput?.value || 0, 10);
-
-                    // ✅ AQUÍ SE HACE LA SUMA REAL
-                    //const nuevaCantidad = base + aporte;
-
-                    input.value = nuevaCantidad;
-                    input.dataset.baseValue = nuevaCantidad; // para futuras ediciones
-                    
-                    // 🆕 PONER APORTE EN 0 DESPUÉS DE GUARDAR
-                  
+                    if (input.dataset.visualValue) {
+                        input.value = input.dataset.visualValue;
+                    }
                 });
             });
-        });
+        }
 
-        // ... el resto del código permanece igual
-    
-
-
-
-        // Listeners para inputs y selects siguen igual
+        // Listeners unificados para inputs
         document.addEventListener('input', function(event) {
             const target = event.target;
-
-            // Cuando cambia el aporte
+            
             if (target.matches('input[id$="-aporte"]')) {
                 const prefix = target.id.split('-aporte')[0];
                 const cantidadOrdInput = document.querySelector(`#${prefix}-cantidad_ord`);
-                const cantidadRecibidaInput = document.querySelector(`#${prefix}-cantidad_recibida`);
-                const estadoItemSelect = document.querySelector(`#${prefix}-estado_item`);
-
-                const base = parseInt(cantidadRecibidaInput.dataset.baseValue || 0, 10);
-                const aporte = parseInt(target.value || 0, 10);
-                const nuevaCantidad = base + aporte;
-
-
-                // Actualizamos estado automáticamente
-                const cantidadNecesaria = parseInt(cantidadOrdInput?.value || 0, 10);
-                if (cantidadNecesaria > 0) {
-                    if (nuevaCantidad === cantidadNecesaria) {
-                        estadoItemSelect.value = 'completo';
-                    } else if (nuevaCantidad > cantidadNecesaria) {
-                        estadoItemSelect.value = 'excedido';
-                    } else {
-                        estadoItemSelect.value = 'incompleto';
+                
+                if (cantidadOrdInput) {
+                    const cantidadNecesaria = parseInt(cantidadOrdInput.value || 0, 10);
+                    if (cantidadNecesaria > 0) {
+                        actualizarEstadoItem(prefix, cantidadNecesaria);
                     }
                 }
-
-                actualizarComentarioCantidad(prefix);
-
-                // Trigger Select2 si aplica
-                if (window.jQuery && window.jQuery.fn.select2) {
-                    window.jQuery(estadoItemSelect).trigger('change.select2');
-                }
-                actualizarEstadoLista();
+                actualizarVisualCantidadRecibida(prefix);
             }
-
-            // Si cambia manualmente cantidad_recibida
+            
             if (target.matches('input[id$="-cantidad_recibida"]')) {
                 const prefix = target.id.split('-cantidad_recibida')[0];
                 actualizarEstadoDesdeCantidadRecibida(target);
             }
         });
 
-
+        // Listener para cambios en selects de productos
         document.addEventListener('change', function(event) {
             if (event.target.matches('select[id$="-product"]')) {
                 const selectedOption = event.target.options[event.target.selectedIndex];
                 const cantidadNecesaria = selectedOption.getAttribute('data-cantidad');
+                
                 if (cantidadNecesaria) {
                     autocompletarCantidadOrd(event.target, cantidadNecesaria);
                 }
             }
         });
 
+        // Listener para Select2 si está disponible
         if (window.jQuery && window.jQuery.fn.select2) {
             $(document).on('select2:select', 'select[id$="-product"]', function(e) {
                 const selectedOption = e.target.options[e.target.selectedIndex];
                 const cantidadNecesaria = selectedOption.getAttribute('data-cantidad');
+                
                 if (cantidadNecesaria) {
                     setTimeout(() => autocompletarCantidadOrd(e.target, cantidadNecesaria), 100);
                 }
             });
         }
     }
-
-
 
     function actualizarEstadoDesdeCantidadRecibida(input) {
         const prefix = input.id.split('-cantidad_recibida')[0];
@@ -380,9 +330,3 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
     });
-
-    // ========== EJECUCIÓN PRINCIPAL ==========
-    // Actualizar al cargar nueva fila o cambiar producto
-    setTimeout(inicializar, 100);
-    
-});
