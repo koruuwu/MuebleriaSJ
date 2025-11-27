@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import *
+from django.template.loader import render_to_string
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
 from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMixin
@@ -9,6 +10,11 @@ from django.http import JsonResponse
 from django import forms
 from django.utils import timezone
 from Materiales.models import Materiale
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from django.http import HttpResponse
+
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
         fields = "__all__"
@@ -249,9 +255,11 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     readonly_fields = ("fecha_solicitud","fecha_entrega",)
     list_filter = ('estado','prioridad',)
     inlines = [ListaCInline, DetalleRecibCInline]
+    change_form_template = "admin/lista_compra_change_form.html"
+
     def get_readonly_fields(self, request, obj=None):
         # Si la orden está completa, todos los campos del admin son readonly
-        if obj and obj.pk and obj.estado == 'completa':
+        if obj and obj.pk and obj.estado not in ['pendiente', 'rechazada','aprobada' ]:
             return [f.name for f in self.model._meta.fields]
         return super().get_readonly_fields(request, obj)
     
@@ -312,7 +320,171 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
             print(f"Error en obtener_productos_por_lista: {e}")
             return JsonResponse([], safe=False)
     
+ 
+    def imprimir_lista_compra(self, request, lista_id):
+        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.units import inch
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from datetime import datetime
+        import os
+        
+        lista = self.get_object(request, lista_id)
+        requerimientos = RequerimientoMateriale.objects.filter(id_lista=lista).select_related('material','proveedor')
+        
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="Lista_Compra_{lista.id}_{datetime.now().strftime("%Y%m%d")}.pdf"'
+        
+        # Crear el documento
+        doc = SimpleDocTemplate(response, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        
+        # Estilos personalizados
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            textColor=colors.HexColor('#2c3e50'),
+            spaceAfter=12,
+            alignment=1  # Centrado
+        )
+        
+        header_style = ParagraphStyle(
+            'CustomHeader',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.white,
+            alignment=1
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.HexColor('#2c3e50'),
+            alignment=0  # Izquierda
+        )
+        
+        # Contenido
+        story = []
+        
+        # Encabezado
+        story.append(Paragraph("MUEBLERÍA SAN JOSÉ", title_style))
+        story.append(Paragraph("LISTA DE COMPRA", title_style))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Información de la lista
+        info_data = [
+            [Paragraph("<b>N° Lista:</b>", normal_style), Paragraph(str(lista.id), normal_style),
+            Paragraph("<b>Fecha Solicitud:</b>", normal_style), Paragraph(lista.fecha_solicitud.strftime("%d/%m/%Y"), normal_style)],
+            [Paragraph("<b>Fecha Entrega:</b>", normal_style), Paragraph(lista.fecha_entrega.strftime("%d/%m/%Y") if lista.fecha_entrega else "No especificada", normal_style),
+            Paragraph("<b>Prioridad:</b>", normal_style), Paragraph(lista.get_prioridad_display(), normal_style)],
+            [Paragraph("<b>Estado:</b>", normal_style), Paragraph(lista.get_estado_display(), normal_style),
+            Paragraph("<b>Generado:</b>", normal_style), Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)]
+        ]
+        
+        info_table = Table(info_data, colWidths=[1.2*inch, 1.5*inch, 1.2*inch, 1.5*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#ecf0f1')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#bdc3c7')),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#bdc3c7')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Tabla de materiales
+        if requerimientos:
+            # Encabezados de la tabla
+            headers = ['Material', 'Proveedor', 'Cantidad', 'Precio', 'Subtotal']
+            
+            # Datos de la tabla
+            table_data = [headers]
+            
+            for req in requerimientos:
+                subtotal = req.precio_actual * req.cantidad_necesaria
+                row = [
+                    Paragraph(req.material.nombre, normal_style),
+                    Paragraph(req.proveedor.compañia, normal_style),
+                    Paragraph(f"L. {req.cantidad_necesaria:,.2f}", normal_style),
+                    Paragraph(f"L. {req.precio_actual:,.2f}", normal_style),
+                    Paragraph(f"L. {subtotal:,.2f}", normal_style)
+                   
+                ]
+                table_data.append(row)
+            
 
+            total_cantidad = sum(req.cantidad_necesaria for req in requerimientos)
+            total_general = sum(req.precio_actual * req.cantidad_necesaria for req in requerimientos)
+            
+            table_data.append([
+                Paragraph("<b>TOTAL GENERAL</b>", normal_style),
+                Paragraph("", normal_style),
+                Paragraph(f"<b>{total_cantidad}</b>", normal_style),
+                Paragraph("", normal_style),
+                Paragraph(f"<b>L. {total_general:,.2f}</b>", normal_style)
+            ])
+            
+            # Crear tabla
+            materiales_table = Table(table_data, colWidths=[2*inch, 2*inch, 1*inch, 1*inch,2*inch])
+            materiales_table.setStyle(TableStyle([
+                # Estilo encabezados
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                
+                # Estilo filas
+                ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor('#f8f9fa')),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e9ecef')),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#2c3e50')),
+                ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Centrar cantidad
+                ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Centrar unidad
+                
+                # Bordes
+                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#34495e')),
+                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+                
+                # Estilo total
+                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4edda')),
+                
+                # Alineación y padding
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('PADDING', (0, 0), (-1, -1), 6),
+            ]))
+            
+            story.append(materiales_table)
+        else:
+            story.append(Paragraph("<b>No hay materiales en esta lista de compra</b>", normal_style))
+        
+        story.append(Spacer(1, 0.5*inch))
+        
+        # Notas
+        notas = [
+            "• Verificar disponibilidad con proveedores antes de realizar pedidos",
+        ]
+        
+        for nota in notas:
+            story.append(Paragraph(nota, ParagraphStyle(
+                'NotaStyle',
+                parent=styles['Normal'],
+                fontSize=8,
+                textColor=colors.HexColor('#7f8c8d'),
+                leftIndent=10
+            )))
+        
+        # Generar PDF
+        doc.build(story)
+        
+        return response
 
 
     # Registrar URLs custom
@@ -343,6 +515,11 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
                 "obtener_productos_por_lista/<int:lista_id>/",
                 self.admin_site.admin_view(self.obtener_productos_por_lista),
                 name="obtener_productos_por_lista",
+            ),
+            path(
+                '<int:lista_id>/imprimir/',
+                self.admin_site.admin_view(self.imprimir_lista_compra),
+                name='imprimir_lista_compra'
             ),
         ]
         return custom + urls
