@@ -1,45 +1,63 @@
-from django.contrib import admin, messages
-from .models import *
-from django import forms
-from proyecto.utils.validators import ValidacionesBaseForm
-from proyecto.utils.widgets import *
-from proyecto.utils.admin_utils import PaginacionAdminMixin
-# Register your models here.
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from .models import PerfilUsuario
+from Sucursales.models import Sucursale, Caja
+from django.urls import path
+from django.http import JsonResponse
 
-class EmpleadosForm(ValidacionesBaseForm):
-    class Meta:
-        model = Empleado
-        fields = '__all__'
-        widgets = {
-            'nombre': WidgetsRegulares.nombre(),
-            'telefono': WidgetsRegulares.telefono(),
-            'email': WidgetsRegulares.email(),
-        }
+class PerfilUsuarioInline(admin.StackedInline):
+    model = PerfilUsuario
+    can_delete = False
+    verbose_name_plural = "Información de sucursal/caja"
+    fk_name = "user"
+    class Media:
+        js = ("filtros/filtrar_cajas_por_sucursal.js",)
 
-    
-        
-        
-class Auth_UserForm(ValidacionesBaseForm):
-    class Meta:
-        model = Auth_User
-        fields = '__all__'
-        widgets = {
-            'username': WidgetsRegulares.nombre(),
-            'first_name': WidgetsRegulares.nombre(),
-            'last_name': WidgetsRegulares.nombre(),
-            'email': WidgetsRegulares.email(),
-        }
+    # Filtrar cajas dependiendo de la sucursal seleccionada
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "caja":
+            if request.user.is_superuser:
+                kwargs["queryset"] = Caja.objects.all()
+            else:
+                # filtrar cajas según la sucursal ligada al usuario
+                perfil = PerfilUsuario.objects.filter(user=request.user).first()
+                if perfil and perfil.sucursal:
+                    kwargs["queryset"] = Caja.objects.filter(sucursal=perfil.sucursal)
+                else:
+                    kwargs["queryset"] = Caja.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-class Auth_UserInLine(admin.TabularInline):
-    model = Auth_User
-    form = Auth_UserForm
-    extra = 0  # no muestres filas vacías adicionales 
-    can_delete = False  # No permite eliminar desde el inline
+class UsuarioAdmin(UserAdmin):
+    inlines = (PerfilUsuarioInline,)
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "filtrar_cajas_por_sucursal/<int:sucursal_id>/",
+                self.admin_site.admin_view(self.filtrar_cajas),
+                name="filtrar-cajas-por-sucursal",
+            ),
+        ]
+        return custom + urls
 
-@admin.register(Empleado)
-class EmpleadosAdmin(PaginacionAdminMixin, admin.ModelAdmin):
-    form = EmpleadosForm
-    search_fields = ('id', 'nombre', 'telefono', 'area')
-    list_display = ('id', 'nombre', 'telefono', 'email', 'area', 'estado', 'id_sucursal')
-    list_display_links = ('id', 'nombre')
-    readonly_fields = ()
+    def filtrar_cajas(self, request, sucursal_id):
+        try:
+            # Validar que la sucursal exista
+            sucursal = Sucursale.objects.filter(id=sucursal_id).first()
+            if not sucursal:
+                return JsonResponse([], safe=False)
+
+            # Si existe, filtrar cajas por la sucursal
+            cajas = Caja.objects.filter(sucursal=sucursal)
+            data = [{"id": c.id, "nombre": c.codigo_caja} for c in cajas]
+
+        except Exception as e:
+            print("Error en filtrar_cajas:", e)
+            data = []
+
+        return JsonResponse(data, safe=False)
+
+
+admin.site.unregister(User)
+admin.site.register(User, UsuarioAdmin)
