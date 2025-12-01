@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from .models import *
+from django.forms import ModelForm
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
@@ -16,21 +17,19 @@ from django.core.exceptions import ValidationError
 
 # Register your models here.
 
-class OrdenesVentaForm(forms.ModelForm):
+
+class OrdenForm(ModelForm):
     class Meta:
         model = OrdenesVenta
-        fields = '__all__'
+        fields = "__all__"
 
     def clean(self):
         cleaned_data = super().clean()
-        empleado = cleaned_data.get('id_empleado')
+
         
-        if empleado and not empleado.id_sucursal:
-            raise forms.ValidationError({
-                'id_empleado': 'El empleado seleccionado no tiene una sucursal asignada.'
-            })
-            
         return cleaned_data
+    
+  
 
 class DetallesOrdeneForm(forms.ModelForm):
     class Meta:
@@ -67,13 +66,119 @@ class DetallesOInline(admin.StackedInline):
 
 @admin.register(OrdenesVenta)
 class OrdenesVentasAdmin(admin.ModelAdmin):
-    form = OrdenesVentaForm
+    form = OrdenForm
     inlines = [DetallesOInline]
-    list_display=('id_factura', 'id_cliente', 'total', 'id_estado_pago', 'fecha_entrega')
+    class Media:
+        js = ("js/generacion_c/factura_dinamica.js",)
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path("obtener_precio_mueble/<int:mueble_id>/", self.admin_site.admin_view(self.obtener_precio_mueble)),
+            path("generar_factura/", 
+            self.admin_site.admin_view(self.generar_factura), 
+            name="generar-factura"),
+            path("obtener_empleado_logeado/", 
+            self.admin_site.admin_view(self.obtener_empleado_logeado),
+            name="obtener-empleado-logeado"),
+        ]
+        return custom + urls
+    
+    def generar_factura(self, request):
+        try:
+            # Obtener el perfil del usuario logueado
+            perfil = PerfilUsuario.objects.filter(user=request.user).first()
+
+            if not perfil:
+                return JsonResponse({"error": "El usuario no tiene un perfil asignado"})
+            
+            if not perfil.sucursal or not perfil.caja:
+                return JsonResponse({"error": "El perfil del usuario no tiene sucursal o caja asignada"})
+
+            parametro = Parametro.objects.get(id=2)
+
+            # Obtener CAI activo para la sucursal del usuario
+            cai = Cai.objects.filter(sucursal=perfil.sucursal, activo=True).first()
+            if not cai:
+                return JsonResponse({"error": "No hay CAI activo para esta sucursal"})
+
+            # Obtener siguiente correlativo sin guardar
+            correlativo_actual = int(cai.ultima_secuencia or "0")
+            siguiente_correlativo = correlativo_actual + 1
+
+
+            # Validar rango
+            rango_final = int(cai.rango_final)
+            if siguiente_correlativo > rango_final:
+                return JsonResponse({"error": "Se ha alcanzado el límite de numeración para este CAI"})
+
+            # Armar número de factura con sucursal y caja del perfil
+            numero_factura = (
+                f"{perfil.sucursal.codigo_sucursal}-"
+                f"{perfil.caja.codigo_caja}-"
+                f"{parametro.valor}-"
+                f"{str(siguiente_correlativo).zfill(8)}"
+            )
+
+            return JsonResponse({
+                "numero_factura": numero_factura,
+                "correlativo": siguiente_correlativo
+            })
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)})
+
+    def save_model(self, request, obj, form, change):
+        perfil = PerfilUsuario.objects.filter(user=request.user).first()
+
+        # Asignar automáticamente el empleado (PerfilUsuario) al crear
+        if not change and perfil:
+            obj.id_empleado = perfil
+
+        # Solo actualizar CAI cuando se guarda una nueva orden
+        if not change and obj.id_factura:
+            partes = obj.id_factura.split('-')
+            if len(partes) >= 4:
+                secuencia = partes[-1]
+
+                if perfil and perfil.sucursal:
+                    cai = Cai.objects.filter(
+                        sucursal=perfil.sucursal,
+                        activo=True
+                    ).first()
+
+                    if cai:
+                        secuencia_actual = int(secuencia.lstrip('0'))
+                        secuencia_cai = int(cai.ultima_secuencia or "0")
+
+                        # Actualizar solo si la secuencia es mayor
+                        if secuencia_actual > secuencia_cai:
+                            cai.ultima_secuencia = str(secuencia_actual).zfill(8)
+                            cai.save()
+
+        super().save_model(request, obj, form, change)
+
+
+    def obtener_empleado_logeado(self, request):
+        perfil = PerfilUsuario.objects.filter(user=request.user).first()
+        return JsonResponse({
+            "id_empleado": perfil.id if perfil else None
+        })
+    
+    def obtener_precio_mueble(self, request, mueble_id):
+        try:
+            mueble = Mueble.objects.get(id=mueble_id)
+            return JsonResponse({"precio": mueble.precio_base})
+        except Mueble.DoesNotExist:
+            return JsonResponse({"precio": 0})
+
+
+
+
+    '''list_display=('id_factura', 'id_cliente', 'total', 'id_estado_pago', 'fecha_entrega')
     readonly_fields = ('fecha_orden',)
 
     class Media:
-        js = ("js/filtro_cajas.js","js/factura_dinamica.js",)
+        js = ("js/factura_dinamica.js",)
 
     
 
@@ -87,7 +192,6 @@ class OrdenesVentasAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom = [
-            path("filtrar_cajas/<int:empleado_id>/", self.admin_site.admin_view(self.filtrar_cajas)),
             path("obtener_precio_mueble/<int:mueble_id>/", self.admin_site.admin_view(self.obtener_precio_mueble)),
             path(
                 "generar_factura/<int:empleado_id>/<int:caja_id>/",
@@ -98,75 +202,9 @@ class OrdenesVentasAdmin(admin.ModelAdmin):
     
    
 
-    def filtrar_cajas(self, request, empleado_id):
-        try:
-            empleado = Empleado.objects.get(id=empleado_id)
-            if not empleado.id_sucursal:
-                cajas = Caja.objects.none()
-            else:
-                # Usar nombre correcto del campo en Caja
-                cajas = Caja.objects.filter(sucursal=empleado.id_sucursal)
-            data = [{"id": c.id, "nombre": c.codigo_caja} for c in cajas]
-        except Empleado.DoesNotExist:
-            data = []
-        except Exception as e:
-            print("Error en filtrar_cajas:", e)
-            data = []
+    
 
-        return JsonResponse(data, safe=False)
 
-    def generar_factura(self, request, empleado_id, caja_id):
-        try:
-            empleado = Empleado.objects.get(id=empleado_id)
-            caja = Caja.objects.get(id=caja_id)
-            parametro = Parametro.objects.get(id=2)
-
-            cai = Cai.objects.filter(sucursal=empleado.id_sucursal, activo=True).first()
-            if not cai:
-                return JsonResponse({"error": "No hay CAI activo para esta sucursal"})
-
-            # Solo calcular el siguiente correlativo sin guardar
-            correlativo_actual = int(cai.ultima_secuencia or "0")
-            siguiente_correlativo = correlativo_actual + 1
-            
-            # Validar rango
-            rango_final = int(cai.rango_final)
-            if siguiente_correlativo > rango_final:
-                return JsonResponse({"error": "Se ha alcanzado el límite de numeración para este CAI"})
-
-            numero_factura = f"{empleado.id_sucursal.codigo_sucursal}-{caja.codigo_caja}-{parametro.valor}-{str(siguiente_correlativo).zfill(8)}"
-
-            return JsonResponse({
-                "numero_factura": numero_factura,
-                "correlativo": siguiente_correlativo
-            })
-        except Exception as e:
-            return JsonResponse({"error": str(e)})
-
-    def save_model(self, request, obj, form, change):
-        # Solo actualizar CAI cuando se guarda una nueva orden
-        if not change and obj.id_factura:
-            # Extraer la secuencia del número de factura
-            partes = obj.id_factura.split('-')
-            if len(partes) >= 4:
-                secuencia = partes[-1]
-                
-                if obj.id_empleado and obj.id_empleado.id_sucursal:
-                    cai = Cai.objects.filter(
-                        sucursal=obj.id_empleado.id_sucursal, 
-                        activo=True
-                    ).first()
-                    
-                    if cai:
-                        secuencia_actual = int(secuencia.lstrip('0'))
-                        secuencia_cai = int(cai.ultima_secuencia or "0")
-                        
-                        # Actualizar solo si la secuencia es mayor
-                        if secuencia_actual > secuencia_cai:
-                            cai.ultima_secuencia = str(secuencia_actual).zfill(8)
-                            cai.save()
-
-        super().save_model(request, obj, form, change)
 
 
 
@@ -271,5 +309,5 @@ class OrdenesVentasAdmin(admin.ModelAdmin):
             # Si hay errores, mostrar el formulario nuevamente
             return self.changeform_view(request, obj.pk, form_url='', extra_context=None)
         
-        return super().response_change(request, obj)
+        return super().response_change(request, obj)'''
 

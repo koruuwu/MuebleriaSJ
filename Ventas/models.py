@@ -2,15 +2,15 @@ from django.db import models
 from archivos.models import *
 from django.core.exceptions import ValidationError
 from Muebles.models import Mueble
-from Sucursales.models import Caja
+from Sucursales.models import Caja, Sucursale
+from Empleados.models import PerfilUsuario
 
 # Tus modelos se generarán aquí con inspectdb
 class OrdenesVenta(models.Model):
     id = models.BigAutoField(primary_key=True)
     id_factura = models.CharField(db_column='ID_Factura')  # Field name made lowercase.
-    id_cotizacion = models.ForeignKey('Compras.Cotizacione', models.DO_NOTHING, db_column='ID_Cotizacion', blank=True, null=True, verbose_name="Cotizacion")  # Field name made lowercase.
-    id_empleado = models.ForeignKey('Empleados.Empleado', models.DO_NOTHING, db_column='ID_Empleado', verbose_name="Empleado")
-    caja = models.ForeignKey(Caja, models.DO_NOTHING, db_column='ID_Caja', blank=True, null=True)  # Field name made lowercase.
+    id_cotizacion = models.ForeignKey('Compras.Cotizacione', models.DO_NOTHING, db_column='ID_Cotizacion', blank=True, null=True, verbose_name="Cotizacion") 
+    id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True) # Field name made lowercase.
     id_cliente = models.ForeignKey('clientes.Cliente', models.DO_NOTHING, db_column='ID_Cliente',verbose_name="Cliente")  # Field name made lowercase.
     descuento = models.FloatField(db_column='Descuento', null=True, blank=True)  # Field name made lowercase.
     subtotal = models.FloatField(db_column='SubTotal')  # Field name made lowercase.
@@ -22,6 +22,8 @@ class OrdenesVenta(models.Model):
     fecha_entrega = models.DateField(db_column='Fecha_Entrega')  # Field name made lowercase
     def __str__(self):
         return self.id_factura
+    
+    
     
     
 
