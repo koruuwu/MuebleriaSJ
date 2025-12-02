@@ -13,6 +13,7 @@ from Sucursales.models import Cai
 from Compras.models import Parametro, InventarioMueble
 from Muebles.models import Mueble
 from django.core.exceptions import ValidationError
+from proyecto.utils.validators_inventario import ValidacionInventarioMixin
 
 
 # Register your models here.
@@ -65,9 +66,31 @@ class DetallesOInline(admin.StackedInline):
  
 
 @admin.register(OrdenesVenta)
-class OrdenesVentasAdmin(admin.ModelAdmin):
+class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
     form = OrdenForm
     inlines = [DetallesOInline]
+
+
+
+    def save_related(self, request, form, formsets, change):
+
+        orden = form.instance
+
+        # 1. Validación general reutilizable
+        errores = self.validar_inventario(request, orden, formsets)
+
+        if errores:
+            for e in errores:
+                messages.error(request, e)
+            return  # No guarda si hay errores
+
+        # 2. Guardar orden + detalles
+        super().save_related(request, form, formsets, change)
+
+        # 3. Actualizar inventario reutilizable
+        self.actualizar_inventario(orden, request)
+
+
     class Media:
         js = ("js/generacion_c/factura_dinamica.js",)
     def get_urls(self):
