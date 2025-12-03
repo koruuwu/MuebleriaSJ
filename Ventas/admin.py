@@ -156,6 +156,45 @@ class DetallesOInline(admin.StackedInline):
 class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
     form = OrdenForm
     inlines = [DetallesOInline]
+    def _process_inline_errors(self, request, formsets):
+        """
+        Toma los errores de los formsets e imprime mensajes arriba del form.
+        """
+        for formset in formsets:
+            if hasattr(formset, "non_form_errors"):
+                for err in formset.non_form_errors():
+                    messages.error(request, err)
+
+            # Errores por formulario (línea) dentro del inline
+            for form in formset.forms:
+                if form.errors:
+                    for field, errors in form.errors.items():
+                        for err in errors:
+                            messages.error(
+                                request,
+                                f"Error en Detalle de Orden ({field}): {err}"
+                            )
+
+    def add_view(self, request, form_url='', extra_context=None):
+        response = super().add_view(request, form_url, extra_context)
+
+        if request.method == "POST" and hasattr(response, "context_data"):
+            formsets = response.context_data.get("inline_admin_formsets", [])
+            self._process_inline_errors(request, [fs.formset for fs in formsets])
+
+        return response
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        response = super().change_view(request, object_id, form_url, extra_context)
+
+        if request.method == "POST" and hasattr(response, "context_data"):
+            formsets = response.context_data.get("inline_admin_formsets", [])
+            self._process_inline_errors(request, [fs.formset for fs in formsets])
+
+        return response
+
+
+
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         form.base_fields['aporte'].initial = 0
