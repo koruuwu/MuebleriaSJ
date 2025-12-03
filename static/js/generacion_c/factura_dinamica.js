@@ -8,101 +8,85 @@ document.addEventListener("DOMContentLoaded", function () {
         const slice = parts.slice(adminIndex, adminIndex + 3);
         return "/" + slice.join("/") + "/";
     }
+
     const adminBase = getAdminBaseUrl();
-    console.log("[factura_dinamica] adminBase:", adminBase);
+
+    // Cache interno para no llamar varias veces
+    let empleadoCached = null;
 
     async function obtenerEmpleado() {
+        if (empleadoCached !== null) return empleadoCached;
+
         try {
             const r = await fetch(`${adminBase}obtener_empleado_logeado/`, {
                 credentials: "same-origin"
             });
             if (!r.ok) return null;
             const data = await r.json();
-            return data.id_empleado || null;
+            empleadoCached = data.id_empleado || null;
+            return empleadoCached;
         } catch (err) {
             console.error("[factura_dinamica] Error obteniendo empleado:", err);
             return null;
         }
     }
 
-    function conectarFactura() {
-        const numeroFactura = document.querySelector("#id_id_factura, [name='id_factura']");
-        if (!numeroFactura) return;
-
-        async function generarFactura() {
-            try {
-                const r = await fetch(`${adminBase}generar_factura/`, {
-                    credentials: "same-origin"
-                });
-                if (!r.ok) return;
-                const data = await r.json();
-                if (data.numero_factura) {
-                    numeroFactura.value = data.numero_factura;
-                    numeroFactura.dispatchEvent(new Event("input", { bubbles: true }));
-                }
-            } catch (err) {
-                console.error("[factura_dinamica] Error generando factura:", err);
-            }
-        }
-
-        // Generar automáticamente la factura al cargar
-        if (!numeroFactura.dataset.loaded) {
-            generarFactura();
-            numeroFactura.dataset.loaded = true;
-        }
-
-        numeroFactura.setAttribute("readonly", true);
-    }
-
     async function conectarEmpleado() {
         const campoEmpleado = document.querySelector("#id_id_empleado, [name='id_empleado']");
         if (!campoEmpleado) return;
 
+        // Evitar volver a asignar
+        if (campoEmpleado.dataset.empleadoLoaded === "1") return;
+
         const empleadoId = await obtenerEmpleado();
         if (!empleadoId) return;
 
-        console.log("ID Empleado obtenido:", empleadoId);
-
-        // SOLUCIÓN: Usar solo readonly, no disabled
         campoEmpleado.value = empleadoId;
-
-        //Actualizar visualmente el Select2
-        $(campoEmpleado).val(empleadoId).trigger('change');
-
-        //Bloquear edición pero permitir que Django lo envíe
-        campoEmpleado.setAttribute("readonly", true);
-
-        //Estilo para que parezca bloqueado
-   
-
-        // SOLUCIÓN: Eliminar el campo oculto para evitar duplicados
-        const hiddenField = document.querySelector("#hidden_empleado");
-        if (hiddenField) {
-            hiddenField.remove();
+        if (typeof $ !== "undefined" && $(campoEmpleado).trigger) {
+            $(campoEmpleado).val(empleadoId).trigger('change');
         }
 
-        console.log("Campo empleado configurado con valor:", campoEmpleado.value);
+        campoEmpleado.setAttribute("readonly", true);
+        campoEmpleado.dataset.empleadoLoaded = "1";
+
+        // Quitar hidden duplicado si existe
+        const hiddenField = document.querySelector("#hidden_empleado");
+        if (hiddenField) hiddenField.remove();
+
+        console.info("[factura_dinamica] Campo empleado configurado con valor:", empleadoId);
     }
 
-    // Ejecutar al inicio
-    conectarFactura();
+    /*async function conectarFactura() {
+        const numeroFactura = document.querySelector("#id_id_factura, [name='id_factura']");
+        if (!numeroFactura) return;
+
+        // SI YA TIENE VALOR → estamos editando → NO GENERAR
+        if (numeroFactura.value && numeroFactura.value.trim() !== "") {
+            numeroFactura.setAttribute("readonly", true);
+            numeroFactura.dataset.facturaLoaded = "1";
+            return;
+        }
+
+        // SI NO TIENE VALOR → SOLO AHÍ GENERAMOS
+        try {
+            const r = await fetch(`${adminBase}generar_factura/`, { credentials: "same-origin" });
+            if (!r.ok) return;
+
+            const data = await r.json();
+            if (data.numero_factura) {
+                numeroFactura.value = data.numero_factura;
+                numeroFactura.dispatchEvent(new Event("input", { bubbles: true }));
+                numeroFactura.setAttribute("readonly", true);
+                numeroFactura.dataset.facturaLoaded = "1";
+            }
+        } catch (err) {
+            console.error("[factura_dinamica] Error generando factura:", err);
+        }
+    }*/
+
+
+
+    // Ejecutar al cargar
     conectarEmpleado();
-
-    // Reintento en Admin dinámico
-    let tries = 0;
-    const maxTries = 10;
-    const retryInterval = setInterval(() => {
-        tries++;
-        conectarFactura();
-        conectarEmpleado();
-        if (tries >= maxTries) clearInterval(retryInterval);
-    }, 400);
-
-    // Observer para cambios
-    const observer = new MutationObserver(() => {
-        conectarFactura();
-        conectarEmpleado();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("beforeunload", () => observer.disconnect());
+    //conectarFactura();
 });

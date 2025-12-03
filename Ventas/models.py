@@ -8,7 +8,7 @@ from Empleados.models import PerfilUsuario
 # Tus modelos se generarán aquí con inspectdb
 class OrdenesVenta(models.Model):
     id = models.BigAutoField(primary_key=True)
-    id_factura = models.CharField(db_column='ID_Factura')  # Field name made lowercase.
+    id_factura = models.CharField(db_column='ID_Factura', blank=True, null=True)  # Field name made lowercase.
     id_cotizacion = models.ForeignKey('Compras.Cotizacione', models.DO_NOTHING, db_column='ID_Cotizacion', blank=True, null=True, verbose_name="Cotizacion") 
     id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True) # Field name made lowercase.
     id_cliente = models.ForeignKey('clientes.Cliente', models.DO_NOTHING, db_column='ID_Cliente',verbose_name="Cliente")  # Field name made lowercase.
@@ -16,12 +16,12 @@ class OrdenesVenta(models.Model):
     subtotal = models.FloatField(db_column='SubTotal')  # Field name made lowercase.
     isv = models.FloatField(db_column='ISV')  # Field name made lowercase.
     total = models.FloatField(db_column='Total')  # Field name made lowercase.
+    pagado = models.FloatField(blank=True, null=True)
     id_estado_pago = models.ForeignKey('EstadoPagos', models.DO_NOTHING, db_column='ID_Estado_Pago', verbose_name="Estado del pago")  # Field name made lowercase.
     id_metodo_pago = models.ForeignKey('MetodosPago', models.DO_NOTHING, db_column='ID_Metodo_Pago', verbose_name="Metodo de pago")  # Field name made lowercase.
     fecha_orden = models.DateTimeField(db_column='Fecha_Orden', auto_now_add=True )  # Field name made lowercase.
     fecha_entrega = models.DateField(db_column='Fecha_Entrega')  # Field name made lowercase
-    def __str__(self):
-        return self.id_factura
+
     
     
     
