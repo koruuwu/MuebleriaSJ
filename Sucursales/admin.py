@@ -19,6 +19,8 @@ class SucursaleForm(ValidacionesBaseForm):
 class CaiInline(admin.StackedInline):
     model = Cai
     extra = 0
+    class Media:
+        js = ('js/estados/cai.js',)
 
 class CajaInline(admin.StackedInline):
     model = Caja

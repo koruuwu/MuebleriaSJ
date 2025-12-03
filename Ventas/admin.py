@@ -2,20 +2,15 @@ from django.contrib import admin, messages
 from .models import *
 from django.forms import ModelForm
 from django import forms
-from proyecto.utils.validators import ValidacionesBaseForm
-from proyecto.utils.widgets import WidgetsRegulares
-from proyecto.utils.admin_utils import PaginacionAdminMixin
 from django.urls import path
 from django.http import JsonResponse
-from Empleados.models import Empleado
-from django.utils import timezone
 from Sucursales.models import Cai
 from Compras.models import Parametro, InventarioMueble
 from Muebles.models import Mueble
 from django.core.exceptions import ValidationError
 from proyecto.utils.validators_inventario import ValidacionInventarioMixin
-
-
+from django.db import transaction
+from django.utils import timezone
 # Register your models here.
 
 
@@ -29,21 +24,42 @@ class OrdenForm(ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        # VALIDACIÓN CAI (MOVIDA DESDE save_model)
+        errores = []
+        hoy = timezone.now().date()
+
+
         perfil = PerfilUsuario.objects.filter(user=self.current_user).first()
 
         if not perfil or not perfil.sucursal or not perfil.caja:
-            raise ValidationError("El usuario no tiene sucursal o caja configurada.")
+            errores.append("El usuario no tiene sucursal o caja configurada.")
 
-        cai = Cai.objects.filter(sucursal=perfil.sucursal, activo=True).first()
+        # Buscar CAI aunque esté inactivo
+        cai = Cai.objects.filter(sucursal=perfil.sucursal).first() if perfil else None
+
         if not cai:
-            raise ValidationError("No hay CAI activo para esta sucursal.")
+            errores.append("No hay CAI configurado para esta sucursal.")
+        else:
+            if cai.fecha_vencimiento < hoy:
+                errores.append("El CAI está vencido.")
+                # Cambiar estado a inactivo automáticamente
+                cai.activo = False
+                cai.save(update_fields=["activo"])
+            # Validar si está activo
+            if not cai.activo:
+                errores.append("El CAI está inactivo para esta sucursal.")
 
-        siguiente = int(cai.ultima_secuencia or "0") + 1
-        if siguiente > int(cai.rango_final):
-            raise ValidationError("Se alcanzó el rango final del CAI.")
+            # Validar secuencia final
+            siguiente = int(cai.ultima_secuencia or "0") + 1
+            if siguiente > int(cai.rango_final):
+                errores.append("Se alcanzó el rango final del CAI.")
+
+        # Mostrar todos los errores juntos
+        if errores:
+            raise ValidationError(errores)
 
         return cleaned_data
+
+
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -251,9 +267,26 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
         # Actualizar CAI solo cuando la orden se ha guardado
+        # Actualizar CAI solo cuando la orden se ha guardado
         if not change:
-            cai.ultima_secuencia = str(siguiente).zfill(8)
-            cai.save()
+            with transaction.atomic():
+
+                # Bloquea el registro del CAI mientras se actualiza
+                cai_seguro = Cai.objects.select_for_update().get(id=cai.id)
+
+                siguiente_num = int(cai_seguro.ultima_secuencia or "0") + 1
+                cai_seguro.ultima_secuencia = str(siguiente_num).zfill(8)
+
+                # Validación final por seguridad
+                if siguiente_num > int(cai_seguro.rango_final):
+                    raise ValidationError("El CAI alcanzó el límite permitido.")
+
+                # Si ya llegó al último número permitido, desactivarlo
+                if siguiente_num >= int(cai_seguro.rango_final):
+                    cai_seguro.activo = False
+
+                cai_seguro.save()
+
 
 
 
@@ -275,8 +308,8 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
 
 
-''' list_display=('id_factura', 'id_cliente', 'total', 'id_estado_pago', 'fecha_entrega')
-    readonly_fields = ('fecha_orden',)'''
+    list_display=('id_factura', 'id_cliente', 'total', 'id_estado_pago', 'fecha_entrega')
+    readonly_fields = ('fecha_orden',)
 
 
     

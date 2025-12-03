@@ -17,20 +17,42 @@ class Sucursale(models.Model):
         db_table = 'Sucursales'
 
 
+from django.utils import timezone
+
 class Cai(models.Model):
     id = models.BigAutoField(primary_key=True)
-    codigo_cai = models.CharField(db_column='Codigo_Cai')  # Field name made lowercase.
-    fecha_emision = models.DateField(db_column='Fecha_Emision')  # Field name made lowercase.
-    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento')  # Field name made lowercase.
-    rango_inicial = models.CharField(db_column='Rango_Inicial')  # Field name made lowercase.
-    rango_final = models.CharField(db_column='Rango_Final')  # Field name made lowercase.
-    ultima_secuencia = models.CharField(db_column='Ultima_Secuencia')  # Field name made lowercase.
-    activo = models.BooleanField(db_column='Activo')  # Field name made lowercase.
-    sucursal = models.ForeignKey('Sucursale', models.DO_NOTHING, db_column='ID_Sucursal')  # Field name made lowercase.
+    codigo_cai = models.CharField(db_column='Codigo_Cai')
+    fecha_emision = models.DateField(db_column='Fecha_Emision')
+    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento')
+    rango_inicial = models.CharField(db_column='Rango_Inicial')
+    rango_final = models.CharField(db_column='Rango_Final')
+    ultima_secuencia = models.CharField(db_column='Ultima_Secuencia')
+    activo = models.BooleanField(db_column='Activo')
+    sucursal = models.ForeignKey('Sucursale', models.DO_NOTHING, db_column='ID_Sucursal')
 
     class Meta:
         managed = False
         db_table = 'CAI'
+
+    def save(self, *args, **kwargs):
+        # --- 1. Desactivar cuando fecha de vencimiento expira ---
+        if self.fecha_vencimiento <=timezone.now().date():
+            self.activo = False
+
+        # --- 2. Desactivar cuando la secuencia alcanza el rango final ---
+        try:
+            if int(self.ultima_secuencia) >= int(self.rango_final):
+                self.activo = False
+        except ValueError:
+            # Por si vienen strings con guiones o formatos inesperados
+            pass
+
+        super().save(*args, **kwargs)
+
+        print("FECHA VENCIMIENTO:", self.fecha_vencimiento)
+        print("HOY:", timezone.now().date())
+        print("Comparación:", self.fecha_vencimiento < timezone.now().date())
+
 
 
 class Caja(models.Model):
