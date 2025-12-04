@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from Compras.models import InventarioMueble
+from Compras.models import InventarioMueble, Estados
 from Ventas.models import DetallesOrdene
 from Empleados.models import PerfilUsuario
 
@@ -60,7 +60,7 @@ class ValidacionInventarioMixin:
 
     def actualizar_inventario(self, orden, request):
         """
-        Descuenta inventario cuando ya se guardó la orden.
+        Descuenta inventario y actualiza el estado automáticamente cuando ya se guardó la orden.
         """
         perfil = PerfilUsuario.objects.filter(user=request.user).first()
         sucursal = getattr(perfil, "sucursal", None)
@@ -80,4 +80,24 @@ class ValidacionInventarioMixin:
             if inventario and inventario.cantidad_disponible >= d.cantidad:
                 inventario.cantidad_disponible -= d.cantidad
                 inventario.ultima_salida = timezone.now().date()
+
+                # Actualizar estado automáticamente
+                inventario.estado = self.calcular_estado_automatico(
+                    inventario.cantidad_disponible,
+                    d.id_mueble  # pasar el mueble
+                )
+
                 inventario.save()
+
+    def calcular_estado_automatico(self, cantidad, material):
+        """Calcular estado automáticamente basado en cantidad y stock mínimo"""
+
+        
+        stock_minimo = getattr(material, 'stock_minimo', 10)
+        
+        if cantidad <= 0:
+            return Estados.objects.get(id=3)  # Agotado
+        elif cantidad < stock_minimo:
+            return Estados.objects.get(id=2)  # Bajo Stock
+        else:
+            return Estados.objects.get(id=1)  # Disponible
