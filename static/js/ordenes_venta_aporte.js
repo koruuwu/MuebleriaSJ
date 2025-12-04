@@ -13,12 +13,17 @@ document.addEventListener("DOMContentLoaded", function () {
         console.warn("No es página de ordenesventa script detenido");
         return;
     }
-
+    const metodoPagoSelect = document.querySelector('#id_id_metodo_pago');
+    const tarjetaInput = document.querySelector('#id_num_tarjeta');
     const aporteInput = document.querySelector('#id_aporte');
     const pagadoInput = document.querySelector('#id_pagado');
     const totalInput = document.querySelector('#id_total');
     const estadoPagoSelect = document.querySelector('#id_id_estado_pago');
     const cuotasInput = document.querySelector('#id_cuotas');  // <-- AQUI
+    const efectivoInput = document.querySelector('#id_efectivo');  // <-- AQUI
+
+    pagadoInput.disabled= true;
+    
 
     console.log("aporteInput:", aporteInput);
     console.log("pagadoInput:", pagadoInput);
@@ -38,6 +43,22 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("Evento change en cuotas → NUEVO VALOR:", cuotasInput.checked);
     });
 
+   
+
+    function actualizarEstiloDeshabilitado() {
+        const campos = [aporteInput, pagadoInput, totalInput, estadoPagoSelect, cuotasInput, tarjetaInput, efectivoInput];
+        //agregar todos los input que tienen permitido ponerse en gris
+        campos.forEach(campo => {
+            if (campo.disabled) {
+                campo.style.backgroundColor = "#f0f0f0ff";  // gris claro
+                campo.style.color = "#999999ff";  // texto gris oscuro
+            } else {
+                campo.style.backgroundColor = "";  // reset
+                campo.style.color = "";  // reset
+            }
+        });
+    }
+
     
     // Crear mensaje pagado
     let mensaje = document.querySelector('#mensaje-pagado');
@@ -51,6 +72,54 @@ document.addEventListener("DOMContentLoaded", function () {
         mensaje.style.marginTop = '4px';
         pagadoInput.insertAdjacentElement("afterend", mensaje);
     }
+
+    function actualizarCamposPorMetodoPago() {
+        const valor = parseInt(metodoPagoSelect.value);
+        console.log("Metodo de pago seleccionado " + valor);
+
+
+        switch (valor) {
+            case 1: // Efectivo
+                tarjetaInput.disabled = true;
+                cuotasInput.disabled = false;
+                efectivoInput.disabled=true;
+                
+                break;
+            case 2: // Tarjeta
+                cuotasInput.disabled = false;
+                tarjetaInput.disabled = false;
+                break;
+            case 3: // Transferencia
+                cuotasInput.checked = false;
+                cuotasInput.disabled = false;
+                tarjetaInput.disabled = true;
+                efectivoInput.disabled=true;
+                break;
+            case 4: // Mixto
+                cuotasInput.checked = false;
+                cuotasInput.disabled = true;
+                tarjetaInput.disabled = false;
+                efectivoInput.disabled=false;
+                
+                break;
+            default:
+                cuotasInput.disabled = true;
+                tarjetaInput.disabled = true;
+                efectivoInput.disabled=true;
+
+                
+
+        }
+
+        actualizarEstiloDeshabilitado();
+
+        // Si quieres que Select2 refleje el cambio en el select, usa esto:
+        if ($(metodoPagoSelect).hasClass('select2-hidden-accessible')) {
+            $(metodoPagoSelect).trigger('change.select2');
+        }
+    }
+
+    actualizarCamposPorMetodoPago();
 
     // ---- FUNCIÓN PARA HABILITAR/DESHABILITAR APORTES ----
     function actualizarHabilitadoAporte() {
@@ -70,6 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
             actualizarPagado();
             console.log("total: "+totall)
         }
+        actualizarEstiloDeshabilitado();
     }
 
     // Ejecutar inicial
@@ -122,6 +192,18 @@ document.addEventListener("DOMContentLoaded", function () {
         mensaje.textContent = mensajeTexto;
     }
 
+    let mensaje_ta = document.querySelector('#mensaje-ta');
+    if (!mensaje_ta) {
+        console.log("Creando mensaje debajo de efectivo");
+        mensaje_ta = document.createElement('small');
+        mensaje_ta.id = "mensaje-ta";
+        mensaje_ta.style.display = 'block';
+        mensaje_ta.style.fontSize = '12px';
+        mensaje_ta.style.fontWeight = 'bold';
+        mensaje_ta.style.marginTop = '4px';
+        efectivoInput.insertAdjacentElement("afterend", mensaje_ta);
+    }
+
     
 
     function actualizarPagado() {
@@ -138,7 +220,32 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         actualizarEstadoPago(total, parseFloat(pagadoInput.value));
+
+        efectivoInput.addEventListener('input', function () {
+            const total = parseFloat(totalInput.value || 0);
+            const efectivo = parseFloat(efectivoInput.value || 0);
+
+            // Calcular lo que falta pagar con tarjeta
+            const tarjetaFaltante = Math.max(total - efectivo, 0);
+
+            // Mostrar mensaje en el mismo elemento 'mensaje'
+             // color opcional
+
+            if(total==efectivo){
+                mensaje_ta.style.color = "red"; // color opcional
+                mensaje_ta.textContent = `Para deposito completo se recomienda el metodo de pago efectivo`;  
+            }else {
+                mensaje_ta.style.color = "green";
+                mensaje_ta.textContent = `Depósito en tarjeta: L. ${tarjetaFaltante.toFixed(2)}`;
+            }
+
+            // También actualizar pagado total si quieres reflejarlo
+            efectivo.insertAdjacentElement("afterend", mensaje_ta);
+
+        });
     }
+    
+    
     // Observar cambios en totalInput
     totalInput.addEventListener('totalActualizado', function() {
         console.log("Evento totalActualizado capturado");
@@ -148,6 +255,11 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log("Total actualizado por otro JS → actualizando pagado");
             actualizarPagado();
         }
+    });
+
+    $(metodoPagoSelect).on('change', function () {
+        actualizarCamposPorMetodoPago();
+        actualizarHabilitadoAporte(); // actualiza aporte/pagado según cuotas
     });
 
 
@@ -161,6 +273,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     console.log("Ejecutando actualizarPagado() inicial");
     actualizarPagado();
+
+    
 
     
 });

@@ -124,7 +124,7 @@ class DetallesOrdenFormSet(BaseInlineFormSet):
             inventario = InventarioMueble.objects.filter(
                 id_mueble=mueble,
                 ubicación=sucursal,
-                estado=True
+                estado__id__in=[1, 2]
             ).first()
 
             if not inventario:
@@ -341,7 +341,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
     readonly_fields = ('fecha_orden','id_factura',)
     fieldsets = [
         ("General", {"fields": ("id_factura", "id_cotizacion","id_empleado","id_cliente","descuento","subtotal","isv","total","fecha_entrega","fecha_orden")}),
-        ("Pago", {"fields": ("cuotas","aporte", "pagado","id_estado_pago","id_metodo_pago","num_tarjeta")}),
+        ("Pago", {"fields": ("cuotas","aporte", "pagado","id_estado_pago","id_metodo_pago","efectivo","num_tarjeta")}),
     ]
 
 

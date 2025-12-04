@@ -41,7 +41,7 @@ class ValidacionInventarioMixin:
                     inventario = InventarioMueble.objects.filter(
                         id_mueble=mueble,
                         ubicación=sucursal,
-                        estado=True
+                        estado__id__in=[1, 2]
                     ).first()
 
                     if not inventario:
@@ -74,7 +74,7 @@ class ValidacionInventarioMixin:
             inventario = InventarioMueble.objects.filter(
                 id_mueble=d.id_mueble,
                 ubicación=sucursal,
-                estado=True
+                estado__id__in=[1, 2]
             ).first()
 
             if inventario and inventario.cantidad_disponible >= d.cantidad:
