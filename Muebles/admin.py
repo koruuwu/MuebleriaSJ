@@ -94,4 +94,5 @@ class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixi
     fieldsets = [
         ("Información General", {"fields": ("nombre", "descripcion","precio_base","categoria","Descontinuado","archivo_temp","imagen","imagen_url")}),
         ("Medidas", {"fields": ("medida","alto","ancho","largo","tamano")}),
+        ("Stock", {"fields": ("stock_maximo","stock_minimo")}),
     ]

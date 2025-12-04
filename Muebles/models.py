@@ -33,6 +33,8 @@ class Mueble(models.Model):
     tamano = models.ForeignKey('Tamaño', models.DO_NOTHING, db_column='id_tamano', blank=False, null=False)
     Descontinuado = models.BooleanField(db_column='Estado')  # Field name made lowercase.
     archivo_temp = None
+    stock_minimo = models.BigIntegerField(db_column='Stock_Minimo')  # Field name made lowercase.
+    stock_maximo = models.BigIntegerField(db_column='Stock_Maximo') 
     def __str__(self):
         return self.nombre
 

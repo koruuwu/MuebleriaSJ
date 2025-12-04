@@ -45,6 +45,38 @@ class InventarioMuebleAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     search_fields = ('id_mueble', 'ubicación')
     readonly_fields=('ultima_entrada', 'ultima_salida')
     list_filter = ('estado','ubicación')
+    class Media:
+        js = ("js/estados/estado_inventario_mueble.js",)
+
+    def obtener_info_mueble(self, request, mueble_id):
+        try:
+            mueble = Mueble.objects.get(id=mueble_id)
+            inventario = InventarioMueble.objects.get(id_mueble=mueble)
+            return JsonResponse({
+                'cantidad_disponible': inventario.cantidad_disponible,
+                'estado': inventario.estado.id,
+                'ultima_entrada': inventario.ultima_entrada,
+                'ultima_salida': inventario.ultima_salida,
+                'nombre_mueble': mueble.nombre,
+                'stock_minimo': mueble.stock_minimo,
+                'stock_maximo': mueble.stock_maximo,
+            })
+        except InventarioMueble.DoesNotExist:
+            return JsonResponse({'error': 'Inventario no encontrado'}, status=404)
+        except Mueble.DoesNotExist:
+            return JsonResponse({'error': 'Mueble no encontrado'}, status=404)
+
+    # Agregar URL custom
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "obtener_info_mueble/<int:mueble_id>/",
+                self.admin_site.admin_view(self.obtener_info_mueble),
+                name="inventario_obtener_info_mueble",
+            ),
+        ]
+        return custom_urls + urls
 
 
 class InventarioMForm(ValidacionesBaseForm):
