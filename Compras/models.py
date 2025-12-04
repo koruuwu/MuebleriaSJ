@@ -6,6 +6,7 @@ from Materiales.models import Materiale, Proveedore, MaterialProveedore
 from django.utils import timezone
 from django.db import transaction
 from Sucursales.models import Sucursale
+from Materiales.models import HistorialPrecio
 class InventarioMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
     id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
@@ -282,17 +283,7 @@ class DetalleRecibido(models.Model):
         else:
             return Estados.objects.get(id=1)  # Disponible
 
-class HistorialPrecio(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    precio = models.FloatField(db_column='Precio')  # Field name made lowercase.
-    fecha_inicio = models.DateField(db_column='Fecha_Inicio')  # Field name made lowercase.
-    fecha_fin = models.DateField(db_column='Fecha_Fin')  # Field name made lowercase.
-    material = models.ForeignKey(Materiale, models.DO_NOTHING, db_column='ID_Material')  # Field name made lowercase.
-    proveedor = models.ForeignKey(Proveedore, models.DO_NOTHING, db_column='ID_Proveedor')  # Field name made lowercase.
 
-    class Meta:
-        managed = False
-        db_table = 'Historial_Precios'
 
 class InventarioMateriale(models.Model):
     id = models.BigAutoField(primary_key=True)

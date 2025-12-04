@@ -131,13 +131,20 @@ class HistorialPInline(admin.TabularInline):
     def has_change_permission(self, request, obj = ...):
         return False
 
+class CalificacionInline(admin.StackedInline):
+    model = Calificacione
+    extra = 0  
+    def has_add_permission(self, request, obj=None):
+        return obj is not None  
+
+
 @admin.register(Proveedore)
 class ProveedoreAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     form= ProveForm
     list_display = ("compañia","nombre", "telefono", "estado")
     search_fields = ('nombre', 'compañia')
     list_filter = ('estado__tipo','materialproveedore__material')
-    inlines=[MaterialProveedorInline, HistorialPInline]
+    inlines=[MaterialProveedorInline, HistorialPInline, CalificacionInline]
     '''fieldsets = [
         ("Información General", {"fields": ("nombre", "telefono")}),
         ("Estado", {"fields": ("estado",)}),

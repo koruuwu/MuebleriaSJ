@@ -1,6 +1,6 @@
 from pickle import FALSE
 from django.db import models
-from Materiales.models import *
+from Materiales.models import UnidadesMedida, Materiale
 
 class CategoriasMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
