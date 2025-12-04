@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (subtotalInput) subtotalInput.value = subtotalGeneral.toFixed(2);
         if (isvInput) isvInput.value = isv.toFixed(2);
         if (totalInput) totalInput.value = total.toFixed(2);
+        totalInput.dispatchEvent(new Event('totalActualizado'));
     }   
 
 

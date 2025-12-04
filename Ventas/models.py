@@ -16,11 +16,13 @@ class OrdenesVenta(models.Model):
     subtotal = models.FloatField(db_column='SubTotal')  # Field name made lowercase.
     isv = models.FloatField(db_column='ISV')  # Field name made lowercase.
     total = models.FloatField(db_column='Total')  # Field name made lowercase.
+    cuotas = models.BooleanField(blank=False, null=False)
     pagado = models.FloatField(blank=True, null=True)
     id_estado_pago = models.ForeignKey('EstadoPagos', models.DO_NOTHING, db_column='ID_Estado_Pago', verbose_name="Estado del pago")  # Field name made lowercase.
     id_metodo_pago = models.ForeignKey('MetodosPago', models.DO_NOTHING, db_column='ID_Metodo_Pago', verbose_name="Metodo de pago")  # Field name made lowercase.
     fecha_orden = models.DateTimeField(db_column='Fecha_Orden', auto_now_add=True )  # Field name made lowercase.
     fecha_entrega = models.DateField(db_column='Fecha_Entrega')  # Field name made lowercase
+    num_tarjeta = models.CharField(blank=True, null=True)
     def __str__(self):
         if self.id_factura:
             return self.id_factura

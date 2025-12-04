@@ -98,6 +98,8 @@ from Empleados.models import PerfilUsuario
 
 class DetallesOrdenFormSet(BaseInlineFormSet):
 
+    
+
     def clean(self):
         super().clean()
         request = self.request
@@ -158,10 +160,27 @@ class DetallesOInline(admin.StackedInline):
     extra = 0
     formset = DetallesOrdenFormSet
 
+    def has_add_permission(self, request, obj):
+        if obj:  # Si la orden ya existe, no permitir agregar
+            return False
+        return super().has_add_permission(request, obj)
+    
+    def has_delete_permission(self, request, obj=None):
+        if obj:  # Si la orden ya existe, no permitir borrar detalles
+            return False
+        return super().has_delete_permission(request, obj)
+    
+    def has_change_permission(self, request, obj=None):
+        if obj:  # Si la orden ya existe, no permitir borrar detalles
+            return False
+        return super().has_change_permission(request, obj)
+
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
         formset.request = request
         return formset
+    
+    
 
     
     class Media:
@@ -172,6 +191,17 @@ class DetallesOInline(admin.StackedInline):
 class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
     form = OrdenForm
     inlines = [DetallesOInline]
+
+
+    def get_readonly_fields(self, request, obj=None):
+        # Si el objeto ya existe (está guardado), hacer todos los campos readonly
+        if obj:  # obj existe cuando se está editando, no cuando se está creando
+            return [field.name for field in obj._meta.fields]
+        return self.readonly_fields
+    
+
+
+
     def _process_inline_errors(self, request, formsets):
         """
         Toma los errores de los formsets e imprime mensajes arriba del form.
@@ -242,7 +272,6 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         ]
         return custom + urls
     
- 
 
     def save_model(self, request, obj, form, change):
 
@@ -309,7 +338,11 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
 
     list_display=('id_factura', 'id_cliente', 'total', 'id_estado_pago', 'fecha_entrega')
-    readonly_fields = ('fecha_orden',)
+    readonly_fields = ('fecha_orden','id_factura',)
+    fieldsets = [
+        ("General", {"fields": ("id_factura", "id_cotizacion","id_empleado","id_cliente","descuento","subtotal","isv","total","fecha_entrega","fecha_orden")}),
+        ("Pago", {"fields": ("cuotas","aporte", "pagado","id_estado_pago","id_metodo_pago","num_tarjeta")}),
+    ]
 
 
     
