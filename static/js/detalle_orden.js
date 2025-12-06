@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {
+    const subtotalInput = document.querySelector("#id_subtotal");
+    const isvInput = document.querySelector("#id_isv");
+    const totalInput = document.querySelector("#id_total");
+
+
+    subtotalInput.readOnly = true;
+    isvInput.readOnly = true;
+    totalInput.readOnly = true;
+   
 
     function getAdminBaseUrl() {
         const parts = window.location.pathname.split("/");

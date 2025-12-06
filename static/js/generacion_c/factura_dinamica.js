@@ -35,26 +35,41 @@ document.addEventListener("DOMContentLoaded", function () {
         const campoEmpleado = document.querySelector("#id_id_empleado, [name='id_empleado']");
         if (!campoEmpleado) return;
 
-        // Evitar volver a asignar
         if (campoEmpleado.dataset.empleadoLoaded === "1") return;
 
         const empleadoId = await obtenerEmpleado();
         if (!empleadoId) return;
 
+        // Asigna el valor
         campoEmpleado.value = empleadoId;
+
         if (typeof $ !== "undefined" && $(campoEmpleado).trigger) {
             $(campoEmpleado).val(empleadoId).trigger('change');
         }
 
-        campoEmpleado.setAttribute("readonly", true);
+        /* ---- SI ES UN SELECT → bloquear correctamente ---- */
+        if (campoEmpleado.tagName.toLowerCase() === "select") {
+
+            // Deshabilitar select (el usuario no puede cambiarlo)
+            campoEmpleado.disabled = true;
+
+            // Crear hidden para enviar valor al backend
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.name = campoEmpleado.name;  // mismo nombre
+            hidden.value = empleadoId;
+            campoEmpleado.after(hidden);
+        } 
+        /* ---- SI ES INPUT NORMAL → readonly ---- */
+        else {
+            campoEmpleado.readOnly = true;
+        }
+
         campoEmpleado.dataset.empleadoLoaded = "1";
 
-        // Quitar hidden duplicado si existe
-        const hiddenField = document.querySelector("#hidden_empleado");
-        if (hiddenField) hiddenField.remove();
-
-        console.info("[factura_dinamica] Campo empleado configurado con valor:", empleadoId);
+        console.info("[factura_dinamica] Campo empleado configurado:", empleadoId);
     }
+
 
     /*async function conectarFactura() {
         const numeroFactura = document.querySelector("#id_id_factura, [name='id_factura']");
