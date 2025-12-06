@@ -405,6 +405,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         sucursal_info = ""
         if sucursal:
             sucursal_info = (
+                f"RTN: {sucursal.rtn}<br/>"
                 f"{sucursal.nombre}<br/>"
                 f"{sucursal.direccion}<br/>"
                 f"Tel: {sucursal.telefono or 'No registrado'}"
