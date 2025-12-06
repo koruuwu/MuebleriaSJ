@@ -258,16 +258,22 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        form.base_fields['aporte'].initial = 0
-        form.current_user = request.user   # PASO CRÍTICO PARA EL CAI
-        try:
-            parametro_des = Parametro.objects.get(id=3)
-            form.base_fields['descuento'].help_text = (
-                f"El descuento máximo actual es de {parametro_des.valor}%."
-            )
-        except Parametro.DoesNotExist:
-            form.base_fields['descuento'].help_text = "No se encontró el parámetro de descuento."
+        form.current_user = request.user
+
+        if 'aporte' in form.base_fields:
+            form.base_fields['aporte'].initial = 0
+
+        if 'descuento' in form.base_fields:
+            try:
+                parametro_des = Parametro.objects.get(id=3)
+                form.base_fields['descuento'].help_text = (
+                    f"El descuento máximo actual es de {parametro_des.valor}%."
+                )
+            except Parametro.DoesNotExist:
+                form.base_fields['descuento'].help_text = "No se encontró el parámetro de descuento."
+
         return form
+
 
     def get_changeform_initial_data(self, request):
         data = super().get_changeform_initial_data(request)
