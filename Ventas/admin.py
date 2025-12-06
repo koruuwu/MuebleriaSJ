@@ -33,6 +33,21 @@ class OrdenForm(ModelForm):
         if not perfil or not perfil.sucursal or not perfil.caja:
             errores.append("El usuario no tiene sucursal o caja configurada.")
 
+        descuento = cleaned_data.get("descuento") or 0
+
+        try:
+            parametro_des = Parametro.objects.get(id=3) 
+            descuento_max = float(parametro_des.valor)
+        except Parametro.DoesNotExist:
+            descuento_max = None
+
+        if descuento_max is not None:
+            if float(descuento) > descuento_max:
+                errores.append(
+                    f"El descuento máximo que se puede aplicar es del {descuento_max}%."
+                )
+       
+
         # Buscar CAI aunque esté inactivo
         cai = Cai.objects.filter(sucursal=perfil.sucursal).first() if perfil else None
 
@@ -245,6 +260,13 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         form = super().get_form(request, obj, **kwargs)
         form.base_fields['aporte'].initial = 0
         form.current_user = request.user   # PASO CRÍTICO PARA EL CAI
+        try:
+            parametro_des = Parametro.objects.get(id=3)
+            form.base_fields['descuento'].help_text = (
+                f"El descuento máximo actual es de {parametro_des.valor}%."
+            )
+        except Parametro.DoesNotExist:
+            form.base_fields['descuento'].help_text = "No se encontró el parámetro de descuento."
         return form
 
     def get_changeform_initial_data(self, request):
