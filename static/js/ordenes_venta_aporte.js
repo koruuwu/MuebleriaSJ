@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const cuotasInput = document.querySelector('#id_cuotas');  // <-- AQUI
     const efectivoInput = document.querySelector('#id_efectivo');  // <-- AQUI
 
-    pagadoInput.disabled= true;
+    pagadoInput.readOnly= true;
     
 
     console.log("aporteInput:", aporteInput);
@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const campos = [aporteInput, pagadoInput, totalInput, estadoPagoSelect, cuotasInput, tarjetaInput, efectivoInput];
         //agregar todos los input que tienen permitido ponerse en gris
         campos.forEach(campo => {
-            if (campo.disabled) {
+            if (campo.readOnly) {
                 campo.style.backgroundColor = "#f0f0f0ff";  // gris claro
                 campo.style.color = "#999999ff";  // texto gris oscuro
             } else {
@@ -80,32 +80,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
         switch (valor) {
             case 1: // Efectivo
-                tarjetaInput.disabled = true;
-                cuotasInput.disabled = false;
-                efectivoInput.disabled=true;
+                tarjetaInput.readOnly = true;
+                cuotasInput.readOnly = false;
+                efectivoInput.readOnly=true;
                 
                 break;
             case 2: // Tarjeta
-                cuotasInput.disabled = false;
-                tarjetaInput.disabled = false;
+                cuotasInput.readOnly = false;
+                tarjetaInput.readOnly = false;
                 break;
             case 3: // Transferencia
                 cuotasInput.checked = false;
-                cuotasInput.disabled = false;
-                tarjetaInput.disabled = true;
-                efectivoInput.disabled=true;
+                cuotasInput.readOnly = false;
+                tarjetaInput.readOnly = true;
+                efectivoInput.readOnly=true;
                 break;
             case 4: // Mixto
                 cuotasInput.checked = false;
-                cuotasInput.disabled = true;
-                tarjetaInput.disabled = false;
-                efectivoInput.disabled=false;
+                cuotasInput.readOnly = true;
+                tarjetaInput.readOnly = false;
+                efectivoInput.readOnly=false;
                 
                 break;
             default:
-                cuotasInput.disabled = true;
-                tarjetaInput.disabled = true;
-                efectivoInput.disabled=true;
+                cuotasInput.readOnly = true;
+                tarjetaInput.readOnly = true;
+                efectivoInput.readOnly=true;
 
                 
 
@@ -129,12 +129,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (cuotasInput.checked) {
             console.log("Cuotas activado  habilitando aporte");
-            aporteInput.disabled = false;
-            pagadoInput.disabled= true;
+            aporteInput.readOnly = false;
+            pagadoInput.readOnly= true;
         } else {
             console.log("Cuotas desactivado  deshabilitando aporte");
             pagadoInput.value= totall;
-            aporteInput.disabled = true;
+            aporteInput.readOnly = true;
             aporteInput.value = 0;
             actualizarPagado();
             console.log("total: "+totall)
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const total = parseFloat(totalInput.value || 0);
 
         // Si aporte está deshabilitado, simplemente pagado = total
-        if (aporteInput.disabled) {
+        if (aporteInput.readOnly) {
             pagadoInput.value = total.toFixed(2);
         } else {
             const nuevoPagado = base + aporte;
@@ -250,8 +250,8 @@ document.addEventListener("DOMContentLoaded", function () {
     totalInput.addEventListener('totalActualizado', function() {
         console.log("Evento totalActualizado capturado");
         console.log("totalInput.value:", totalInput.value);
-        console.log("aporteInput.disabled:", aporteInput.disabled);
-        if (aporteInput.disabled) {
+        console.log("aporteInput.readOnly:", aporteInput.readOnly);
+        if (aporteInput.readOnly) {
             console.log("Total actualizado por otro JS → actualizando pagado");
             actualizarPagado();
         }

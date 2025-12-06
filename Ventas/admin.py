@@ -269,6 +269,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
             path("obtener_empleado_logeado/", 
             self.admin_site.admin_view(self.obtener_empleado_logeado),
             name="obtener-empleado-logeado"),
+            
         ]
         return custom + urls
     
