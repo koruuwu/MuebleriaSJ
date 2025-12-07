@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'Compras',
     'Parametros',
     'Trabajo',
+    'nested_admin',
 ]
 
 JAZZMIN_SETTINGS = {

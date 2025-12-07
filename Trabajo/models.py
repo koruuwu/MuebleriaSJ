@@ -28,8 +28,8 @@ class OrdenMensualDetalle(models.Model):
 
 class AportacionEmpleado(models.Model):
     id = models.BigAutoField(primary_key=True)
-    id_orden_detalle = models.ForeignKey('OrdenMensualDetalle', models.DO_NOTHING, blank=True, null=True)
-    id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, blank=True, null=True) # Field name made lowercase.
+    id_orden_detalle = models.ForeignKey('OrdenMensualDetalle', models.DO_NOTHING, db_column='id_orden_detalle', blank=True, null=True)
+    id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True) # Field name made lowercase.
     cant_aprobada = models.BigIntegerField(blank=True, null=True)
     cantidad_finalizada = models.BigIntegerField(blank=True, null=True)
     estado = models.BigIntegerField(blank=True, null=True)

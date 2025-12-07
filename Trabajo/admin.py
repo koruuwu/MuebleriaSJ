@@ -1,21 +1,18 @@
 from django.contrib import admin
-
+import nested_admin
 from Trabajo.models import AportacionEmpleado, OrdenMensuale, OrdenMensualDetalle
 
 
-class AportacionMInline(admin.StackedInline):
+class AportacionMInline(nested_admin.NestedStackedInline):
     model = AportacionEmpleado
-    extra = 0
+    extra = 1
 
-
-class DetalleOrdenMInline(admin.StackedInline):
+class DetalleOrdenMInline(nested_admin.NestedStackedInline):
     model = OrdenMensualDetalle
-    extra = 0
-    inlines=(AportacionMInline,)
+    extra = 1
+    inlines = [AportacionMInline]
 
-
-# Register your models here.
 @admin.register(OrdenMensuale)
-class OrdenMensualeAdmin(admin.ModelAdmin):
-    inlines=(DetalleOrdenMInline,)
+class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
+    inlines = [DetalleOrdenMInline]
 
