@@ -36,24 +36,6 @@ class Cai(models.Model):
         managed = False
         db_table = 'CAI'
 
-    def save(self, *args, **kwargs):
-        # --- 1. Desactivar cuando fecha de vencimiento expira ---
-        if self.fecha_vencimiento <=timezone.now().date():
-            self.activo = False
-
-        # --- 2. Desactivar cuando la secuencia alcanza el rango final ---
-        try:
-            if int(self.ultima_secuencia) >= int(self.rango_final):
-                self.activo = False
-        except ValueError:
-            # Por si vienen strings con guiones o formatos inesperados
-            pass
-
-        super().save(*args, **kwargs)
-
-        print("FECHA VENCIMIENTO:", self.fecha_vencimiento)
-        print("HOY:", timezone.now().date())
-        print("Comparación:", self.fecha_vencimiento < timezone.now().date())
 
 
 
