@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'Empleados',
     'Compras',
     'Parametros',
+    'Trabajo',
 ]
 
 JAZZMIN_SETTINGS = {
