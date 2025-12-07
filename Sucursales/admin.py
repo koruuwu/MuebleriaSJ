@@ -116,10 +116,14 @@ class SucursalesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
             ganador.activo = True
             ganador.save(update_fields=['activo'])
 
-            messages.success(
-                request,
-                f"Se activó automáticamente el CAI {ganador.codigo_cai}"
-            )
+            if not hasattr(request, '_cai_message_sent'):
+                messages.success(
+                    request,
+                    f"Se activó automáticamente el CAI {ganador.codigo_cai} con fecha de vencimiento más próxima {ganador.fecha_vencimiento.strftime('%d/%m/%Y')}"
+                )
+                request._cai_message_sent = True
+            # Segundo mensaje con fecha de vencimiento
+           
 
 
             
