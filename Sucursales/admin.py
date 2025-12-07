@@ -47,76 +47,79 @@ class SucursalesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
 
         formset.save_m2m()
 
-        # --- TU LÓGICA AQUÍ ---
         sucursal = form.instance
 
         with transaction.atomic():
             hoy = timezone.now().date()
             cais = Cai.objects.select_for_update().filter(sucursal=sucursal)
 
-            # 1) Desactivar vencidos o excedidos
+            cais_validos = []
+
+            # 1) VALIDAR TODOS
             for cai in cais:
-                desactivar = False
+                valido = True
 
+                # Validar fecha
                 if cai.fecha_vencimiento and cai.fecha_vencimiento < hoy:
-                    cai.activo = False
-                    desactivar = True
+                    valido = False
+
+                # Validar rango
+                try:
+                    ultima = int(cai.ultima_secuencia or "0")
+                    final = int(cai.rango_final or "0")
+                    if ultima >= final:
+                        valido = False
+                except:
+                    valido = False
+
+                # Si no es válido → DESACTIVAR
+                if not valido:
+                    if cai.activo:
+                        cai.activo = False
+                        cai.save(update_fields=['activo'])
                 else:
-                    try:
-                        ultima = int(cai.ultima_secuencia or "0")
-                        final = int(cai.rango_final or "0")
-                        if ultima >= final:
-                            cai.activo = False
-                            desactivar = True
-                    except:
-                        pass
+                    cais_validos.append(cai)
 
-                if desactivar:
-                    cai.save(update_fields=['activo'])
-
-            # 2) Releer
-            activos = list(Cai.objects.filter(
-                sucursal=sucursal, activo=True
-            ).order_by('fecha_vencimiento'))
-
-            # 3) Activar automático si ninguno activo
-            if len(activos) == 0:
-                candidato = (Cai.objects.filter(
-                    sucursal=sucursal,
-                    fecha_vencimiento__gte=hoy
-                )
-                .order_by('fecha_vencimiento')
-                .first())
-
-                if candidato:
-                    candidato.activo = True
-                    candidato.save(update_fields=['activo'])
-
-                    messages.info(
-                        request,
-                        f"No había CAIs activos. Se activó automáticamente el CAI {candidato.codigo_cai}"
-                    )
-
-            # 4) Si hay más de uno activo
-            activos = list(Cai.objects.filter(
-                sucursal=sucursal, activo=True
-            ).order_by('fecha_vencimiento'))
-
-            if len(activos) > 1:
-                ganador = activos[0]
-                Cai.objects.filter(
-                    sucursal=sucursal, activo=True
-                ).exclude(pk=ganador.pk).update(activo=False)
-
+            # 2) SI NINGUNO ES VÁLIDO → NINGUNO SE ACTIVA
+            if not cais_validos:
                 messages.warning(
                     request,
-                    f"Se dejó activo el CAI {ganador.codigo_cai}"
+                    "Ningún CAI cumple las validaciones. No se activó ningún CAI."
                 )
+                return
 
-            elif len(activos) == 1:
-                messages.success(
+            # 3) TOMAR SOLO LOS QUE NO VENCEN HOY
+            candidatos = [
+                cai for cai in cais_validos
+                if cai.fecha_vencimiento and cai.fecha_vencimiento > hoy
+            ]
+
+            # Si todos vencen hoy, no se activa ninguno
+            if not candidatos:
+                messages.warning(
                     request,
-                    f"CAI activo: {activos[0].codigo_cai}"
+                    "Todos los CAIs válidos vencen hoy. No se activó ningún CAI."
                 )
+                return
+
+            # 4) GANADOR = EL DE FECHA MÁS PRÓXIMA (NO HOY)
+            ganador = sorted(
+                candidatos,
+                key=lambda x: x.fecha_vencimiento
+            )[0]
+
+            # 5) ACTIVAR SOLO EL GANADOR
+            Cai.objects.filter(
+                sucursal=sucursal
+            ).update(activo=False)
+
+            ganador.activo = True
+            ganador.save(update_fields=['activo'])
+
+            messages.success(
+                request,
+                f"Se activó automáticamente el CAI {ganador.codigo_cai}"
+            )
+
 
             
