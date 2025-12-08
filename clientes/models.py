@@ -8,7 +8,7 @@ class Cliente(models.Model):
     nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.
     telefono = models.CharField(db_column='Telefono')  # Field name made lowercase.
     direccion = models.CharField(db_column='Direccion')  # Field name made lowercase.
-    usuario_final = models.BooleanField(db_column='Uduario_Final')  # Field name made lowercase.
+    rtn = models.CharField(db_column='RTN', blank=True, null=True)  # Field name made lowercase.
 
     def __str__(self):
         return self.nombre

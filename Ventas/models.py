@@ -2,16 +2,18 @@ from django.db import models
 from archivos.models import *
 from django.core.exceptions import ValidationError
 from Muebles.models import Mueble
-from Sucursales.models import Caja, Sucursale
+from Sucursales.models import Caja, Sucursale, Cai
 from Empleados.models import PerfilUsuario
 
 # Tus modelos se generarán aquí con inspectdb
 class OrdenesVenta(models.Model):
     id = models.BigAutoField(primary_key=True)
+    cai_usado = models.ForeignKey(Cai, models.DO_NOTHING, db_column='cai_usado', blank=True, null=True)
     id_factura = models.CharField(db_column='ID_Factura', blank=True, null=True)  # Field name made lowercase.
     id_cotizacion = models.ForeignKey('Compras.Cotizacione', models.DO_NOTHING, db_column='ID_Cotizacion', blank=True, null=True, verbose_name="Cotizacion") 
     id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True) # Field name made lowercase.
     id_cliente = models.ForeignKey('clientes.Cliente', models.DO_NOTHING, db_column='ID_Cliente',verbose_name="Cliente")  # Field name made lowercase.
+    rtn = models.BooleanField(db_column='RTN', blank=False, null=False)  # Field name made lowercase.
     descuento = models.FloatField(db_column='Descuento', null=True, blank=True)  # Field name made lowercase.
     subtotal = models.FloatField(db_column='SubTotal')  # Field name made lowercase.
     isv = models.FloatField(db_column='ISV')  # Field name made lowercase.
@@ -24,6 +26,7 @@ class OrdenesVenta(models.Model):
     fecha_entrega = models.DateField(db_column='Fecha_Entrega')  # Field name made lowercase
     efectivo = models.FloatField(blank=True, null=True)
     num_tarjeta = models.CharField(blank=True, null=True)
+
     def __str__(self):
         if self.id_factura:
             return self.id_factura

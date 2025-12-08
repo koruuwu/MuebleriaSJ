@@ -395,6 +395,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
             )
 
             obj.id_factura = numero_factura
+            obj.cai_usado = cai 
 
         # Guardar la orden (llama al super)
         super().save_model(request, obj, form, change)
@@ -520,7 +521,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         )
 
         perfil = PerfilUsuario.objects.filter(user=request.user).first()
-        cai = Cai.objects.filter(sucursal=perfil.sucursal).first()
+        cai = orden.cai_usado
         sucursal = None
         if perfil and hasattr(perfil, 'sucursal'):
             sucursal = perfil.sucursal
@@ -691,12 +692,18 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         else:
             tarjeta = (total - efectivo)
 
+        usuariofinal=orden.rtn
+        if usuariofinal == True:
+            eretene=cliente.rtn
+        else:
+            eretene="CF"
+
         datos_cliente = [
             [Paragraph("<b>DATOS DEL CLIENTE</b>", label_style), ""],
             [Paragraph("<b>Nombre:</b>", label_style), 
             Paragraph(cliente.nombre, data_style)],
             [Paragraph("<b>RTN:</b>", label_style), 
-            Paragraph("No registrado", data_style)],
+            Paragraph(eretene, data_style)],
             [Paragraph("<b>Teléfono:</b>", label_style), 
             Paragraph(cliente.telefono or "No registrado", data_style)],
             [Paragraph("<b>Dirección:</b>", label_style), 
@@ -887,9 +894,9 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
 
     list_display=('id_factura', 'id_cliente', 'total', 'id_estado_pago', 'fecha_entrega')
-    readonly_fields = ('fecha_orden','id_factura',)
+    readonly_fields = ('fecha_orden','id_factura','cai_usado',)
     fieldsets = [
-        ("General", {"fields": ("id_factura", "id_cotizacion","id_empleado","id_cliente","descuento","subtotal","isv","total","fecha_entrega","fecha_orden")}),
+        ("General", {"fields": ("id_factura", "id_cotizacion","id_empleado","id_cliente","rtn","descuento","subtotal","isv","total","fecha_entrega","fecha_orden")}),
         ("Pago", {"fields": ("cuotas","aporte", "pagado","id_estado_pago","id_metodo_pago","efectivo","num_tarjeta")}),
     ]
 

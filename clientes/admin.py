@@ -56,7 +56,7 @@ class ClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     search_fields = ('nombre','telefono')
     list_display = ('nombre','telefono','direccion')
     list_display_links = ('nombre',)
-    list_filter = ('usuario_final',)
+    list_filter = ()
     inlines = [DocumentosClienteInline]
    
 
