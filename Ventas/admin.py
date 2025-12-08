@@ -39,23 +39,25 @@ class OrdenForm(ModelForm):
         # VALIDACIÓN: EFECTIVO MÍNIMO
         # -------------------------
         total = cleaned_data.get("total") or 0
-        efectivo = cleaned_data.get("efectivo") or 0
+        efectivo = cleaned_data.get("efectivo") 
 
-        try:
-            parametro_efectivo = Parametro.objects.get(id=4)
-            porcentaje_min = float(parametro_efectivo.valor)  # Ej: 10 = 10%
-        except Parametro.DoesNotExist:
-            porcentaje_min = None
+        if efectivo not in (None, ""):
+            efectivo = float(efectivo)
 
-        if porcentaje_min is not None and total > 0:
-            minimo_requerido = total * (porcentaje_min / 100)
+            try:
+                parametro_efectivo = Parametro.objects.get(id=4)
+                porcentaje_min = float(parametro_efectivo.valor)  # Ej: 10 = 10%
+            except Parametro.DoesNotExist:
+                porcentaje_min = None
 
-            if efectivo < minimo_requerido:
-                # No bloquea: solo advertencia en pantalla         
-                errores.append(
-                    f"El efectivo ingresado ({efectivo}) es menor al mínimo requerido "
-                    f"({minimo_requerido:.2f}) según el porcentaje deposito minimo {porcentaje_min}%."
-                )
+            if porcentaje_min is not None and total > 0:
+                minimo_requerido = total * (porcentaje_min / 100)
+
+                if efectivo < minimo_requerido:
+                    errores.append(
+                        f"El efectivo ingresado ({efectivo}) es menor al mínimo requerido "
+                        f"({minimo_requerido:.2f}) según el porcentaje depósito mínimo {porcentaje_min}%."
+                    )
 
 
         try:
