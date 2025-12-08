@@ -40,6 +40,9 @@ class Cotizacione(models.Model):
     activo = models.BooleanField(db_column='Estado', default=True)  # Field name made lowercase.
     fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento')  # Field name made lowercase.
     cliente = models.ForeignKey(Cliente, models.DO_NOTHING, db_column='ID_Cliente')  # Field name made lowercase.
+    subtotal = models.FloatField(db_column='SubTotal', null=True, blank=True)
+    isv = models.FloatField(db_column='ISV', null=True, blank=True)
+    total = models.FloatField(db_column='Total', null=True, blank=True)
     def __str__(self):
         return str(self.cliente)
 

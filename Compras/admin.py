@@ -193,6 +193,7 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     readonly_fields=("fecha_registro","fecha_vencimiento")
     list_filter = ('activo',)
     inlines = [DetalleCotizacionesInline]
+  
     
   
     def save_model(self, request, obj, form, change):
