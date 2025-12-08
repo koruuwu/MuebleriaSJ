@@ -184,15 +184,29 @@ class DetalleCotizacionesInline(admin.StackedInline):
         js = ('js/detalle_cotizacion.js',)
 
     
-
+from django.urls import reverse
+from django.utils.html import format_html
 @admin.register(Cotizacione)
 class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     form = CotizacioneForm
-    list_display = ("cliente", "fecha_registro", "activo", "fecha_vencimiento")
+    list_display = ("cliente", "fecha_registro", "activo", "fecha_vencimiento", "convertir_a_orden")
     search_fields = ('cliente',)
     readonly_fields=("fecha_registro","fecha_vencimiento")
     list_filter = ('activo',)
     inlines = [DetalleCotizacionesInline]
+
+    
+    def convertir_a_orden(self, obj):
+        url = (
+            reverse('admin:Ventas_ordenesventa_add')
+            + f'?cotizacion_id={obj.id}'
+        )
+        return format_html(
+            '<a class="button" href="{}">Convertir a Orden</a>',
+            url
+        )
+
+    convertir_a_orden.short_description = "Orden de Venta"
   
     
   

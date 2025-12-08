@@ -5,7 +5,7 @@ from django import forms
 from django.urls import path
 from django.http import JsonResponse
 from Sucursales.models import Cai
-from Compras.models import Parametro, InventarioMueble
+from Compras.models import Parametro, InventarioMueble, DetalleCotizaciones
 from Muebles.models import Mueble
 from django.core.exceptions import ValidationError
 from proyecto.utils.validators_inventario import ValidacionInventarioMixin
@@ -305,10 +305,29 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
     def get_changeform_initial_data(self, request):
         data = super().get_changeform_initial_data(request)
+
+        # Valor por defecto que ya tenías
         data['aporte'] = 0
+
+        # Precargar desde cotización si viene desde el botón
+        cotizacion_id = request.GET.get('cotizacion_id')
+        if cotizacion_id:
+            from Compras.models import Cotizacione
+
+            try:
+                cot = Cotizacione.objects.get(pk=cotizacion_id)
+            except Cotizacione.DoesNotExist:
+                return data
+
+            data.update({
+                'id_cotizacion': cot,
+                'id_cliente': cot.cliente,
+                'subtotal': cot.subtotal,
+                'isv': cot.isv,
+                'total': cot.total,
+            })
+
         return data
-
-
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
@@ -317,7 +336,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
 
     class Media:
-        js = ("js/ordenes_venta_aporte.js","js/generacion_c/factura_dinamica.js",)
+        js = ("js/ordenes_venta_aporte.js","js/generacion_c/factura_dinamica.js","js/generacion_c/orden_desde_cotizacion.js")
     def get_urls(self):
         urls = super().get_urls()
         custom = [
@@ -330,10 +349,28 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.imprimir_factura),
                 name="imprimir_factura"
             ),
+            path(
+                'detalles-cotizacion/<int:cotizacion_id>/',
+                self.admin_site.admin_view(self.detalles_cotizacion_json),
+                name='detalles-cotizacion-json'
+            ),
             
         ]
         return custom + urls
     
+    
+    def detalles_cotizacion_json(self, request, cotizacion_id):
+            detalles = DetalleCotizaciones.objects.filter(id_cotizacion_id=cotizacion_id)
+            data = [
+                {
+                    'mueble': d.id_mueble_id,
+                    'precio': d.precio_unitario,
+                    'cantidad': d.cantidad,
+                    'subtotal': d.subtotal,
+                }
+                for d in detalles
+            ]
+            return JsonResponse(data, safe=False)
 
     def save_model(self, request, obj, form, change):
         perfil = PerfilUsuario.objects.filter(user=request.user).first()
