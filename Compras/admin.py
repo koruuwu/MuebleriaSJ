@@ -14,7 +14,7 @@ from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
-
+from Notificaciones.utils.notificacio_reutilizable import crear_notificacion
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
         fields = "__all__"
@@ -135,6 +135,42 @@ class InventarioMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
         ]
         return custom_urls + urls
     
+    def save_model(self, request, obj, form, change):
+            print(">>> Entró al save_model de InventarioMaterialAdmin")
+
+            super().save_model(request, obj, form, change)
+
+            try:
+                print(">>> Intentando generar notificación...")
+                stock_minimo = obj.id_material.stock_minimo
+                actual = obj.cantidad_disponible
+                print("Actual:", actual, " Mínimo:", stock_minimo)
+   
+                stock_minimo = obj.id_material.stock_minimo
+                actual = obj.cantidad_disponible
+
+                if actual <= stock_minimo:
+                    if actual == 0:
+                        mensaje = (
+                        f"Stock agotado para el material: {obj.id_material.nombre}. "
+                        )
+                    else:
+                    
+                        mensaje = (
+                            f"Stock bajo para el material: {obj.id_material.nombre}. "
+                            f"Actual: {actual} | Mínimo: {stock_minimo}"
+                        )
+
+                    # Aquí creas la notificación
+                    crear_notificacion(
+                        tipo="alerta",
+                        mensaje=mensaje,
+                        objeto=obj
+                    )
+            except Exception as e:
+                print("ERROR generando notificación:", e)
+
+
     class Media:
         js = ("js/estado_inventario_material.js",)
 

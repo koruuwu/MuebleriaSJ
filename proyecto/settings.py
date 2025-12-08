@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'Compras',
     'Parametros',
     'Trabajo',
+    'Notificaciones',
     'nested_admin',
 ]
 
