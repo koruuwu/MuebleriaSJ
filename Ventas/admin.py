@@ -38,6 +38,22 @@ class OrdenForm(ModelForm):
                 # -------------------------
         # VALIDACIÓN: EFECTIVO MÍNIMO
         # -------------------------
+        usuariofinal = cleaned_data.get("rtn")      # Checkbox (True / False)
+        cliente = cleaned_data.get("id_cliente")        # Cliente seleccionado
+
+        # Validar solo si el checkbox está activado
+        if usuariofinal:
+            # Validar que el usuario haya seleccionado un cliente
+            if cliente is None:
+                errores.append("Debe seleccionar un cliente para poder usar RTN final.")
+            else:
+                # Validar que el cliente tenga un RTN asignado
+                if not cliente.rtn:
+                    errores.append(
+                        "El cliente no tiene RTN configurado. "
+                        "Debe asignarle un RTN en su ficha antes de continuar."
+                    )
+
         total = cleaned_data.get("total") or 0
         efectivo = cleaned_data.get("efectivo") 
 
