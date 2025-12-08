@@ -1,6 +1,7 @@
 from django.contrib import admin
 import nested_admin
 from Trabajo.models import AportacionEmpleado, OrdenMensuale, OrdenMensualDetalle
+from Empleados.models import PerfilUsuario
 from django.forms import ModelForm
 from django import forms
 from django.urls import path
@@ -47,7 +48,6 @@ class AportacionForm(ModelForm):
 
 
 
-
 class AportacionMInline(nested_admin.NestedStackedInline):
     model = AportacionEmpleado
     extra = 1
@@ -55,7 +55,10 @@ class AportacionMInline(nested_admin.NestedStackedInline):
 class DetalleOrdenMInline(nested_admin.NestedStackedInline):
     model = OrdenMensualDetalle
     extra = 1
+    min_num = 1  # Cambia a 1 para forzar al menos un detalle
+  
     inlines = [AportacionMInline]
+    
 
 @admin.register(OrdenMensuale)
 class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
@@ -77,6 +80,11 @@ class AportacionAdmin(admin.ModelAdmin):
                 "filtrar_detalles/<int:orden_id>/",
                 self.admin_site.admin_view(self.filtrar_detalles_por_orden),
                 name="filtrar_detalles_orden",
+            ),
+            path(
+                "obtener_empleado_logeado/",
+                self.admin_site.admin_view(self.obtener_empleado_logeado),
+                name="obtener-empleado-logeado-aportacion",
             )
         ]
         return custom + urls
@@ -97,6 +105,12 @@ class AportacionAdmin(admin.ModelAdmin):
             })
 
         return JsonResponse(data, safe=False)
+    
+    def obtener_empleado_logeado(self, request):
+        perfil = PerfilUsuario.objects.filter(user=request.user).first()
+        return JsonResponse({
+            "id_empleado": perfil.id if perfil else None
+        })
 
     
 

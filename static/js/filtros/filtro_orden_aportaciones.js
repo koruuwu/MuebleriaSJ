@@ -1,5 +1,50 @@
 // static/js/filtros/filtro_orden_aportaciones.js
 document.addEventListener("DOMContentLoaded", function () {
+     const campoEmpleado = document.querySelector("#id_id_empleado, [name='id_empleado']");
+    if (!campoEmpleado) return;
+
+    async function obtenerEmpleado() {
+        try {
+            const response = await fetch("/admin/Trabajo/aportacionempleado/obtener_empleado_logeado/", {
+                credentials: "same-origin"
+            });
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data.id_empleado || null;
+        } catch (err) {
+            console.error("Error obteniendo empleado:", err);
+            return null;
+        }
+    }
+
+    async function setearEmpleado() {
+        if (campoEmpleado.dataset.empleadoLoaded === "1") return;
+
+        const empleadoId = await obtenerEmpleado();
+        if (!empleadoId) return;
+
+        campoEmpleado.value = empleadoId;
+
+        if (typeof $ !== "undefined" && $(campoEmpleado).trigger) {
+            $(campoEmpleado).val(empleadoId).trigger('change');
+        }
+
+        if (campoEmpleado.tagName.toLowerCase() === "select") {
+            campoEmpleado.disabled = true;
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.name = campoEmpleado.name;
+            hidden.value = empleadoId;
+            campoEmpleado.after(hidden);
+        } else {
+            campoEmpleado.readOnly = true;
+        }
+
+        campoEmpleado.dataset.empleadoLoaded = "1";
+        console.info("Campo empleado configurado:", empleadoId);
+    }
+
+    setearEmpleado();
     console.log("JS cargado correctamente");
 
     const ordenSelect = document.getElementById("id_orden_selector");
