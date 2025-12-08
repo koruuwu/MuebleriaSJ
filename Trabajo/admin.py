@@ -14,6 +14,9 @@ class AportacionForm(ModelForm):
         help_text="Seleccione la orden; luego elija el detalle correspondiente."
     )
 
+    cantidad_solicitada = forms.IntegerField(initial=0, required=False, label="Cantidad Solicitada")
+
+
     class Meta:
         model = AportacionEmpleado
         fields = "__all__"
@@ -44,6 +47,85 @@ class AportacionForm(ModelForm):
                 self.fields["id_orden_detalle"].queryset = (
                     OrdenMensualDetalle.objects.filter(id_orden=orden)
                 )
+    def clean(self):
+        cleaned = super().clean()
+        errores = []
+
+        detalle = cleaned.get("id_orden_detalle")
+        empleado = cleaned.get("id_empleado")
+        cantidad_solicitada = cleaned.get("cantidad_solicitada")
+
+        # -----------------------------
+        # Validaciones básicas
+        # -----------------------------
+        if not detalle:
+            errores.append("Debe seleccionar un detalle de orden para trabajar.")
+
+        if not empleado:
+            errores.append("No se detectó un empleado. Intente recargar la página.")
+
+        if not cantidad_solicitada or cantidad_solicitada <= 0:
+            errores.append("La cantidad solicitada debe ser mayor que 0.")
+
+        # Si ya hay errores básicos, detenemos aquí
+        if errores:
+            raise forms.ValidationError(errores)
+
+        # -----------------------------
+        # Cálculo de unidades asignadas
+        # -----------------------------
+        from django.db.models import Sum
+
+        asignaciones = (
+            AportacionEmpleado.objects
+            .filter(id_orden_detalle=detalle)
+            .exclude(id=self.instance.id)
+            .values("id_empleado__user__username", "cant_aprobada")
+        )
+
+        total_asignado = (
+            AportacionEmpleado.objects
+            .filter(id_orden_detalle=detalle)
+            .exclude(id=self.instance.id)
+            .aggregate(total=Sum("cant_aprobada"))["total"] or 0
+        )
+
+        planificada = detalle.cantidad_planificada or 0
+        disponible = planificada - total_asignado
+
+        # -----------------------------
+        # Validación principal
+        # -----------------------------
+        if cantidad_solicitada > disponible:
+            errores.append(
+                f"No es posible asignar {cantidad_solicitada} unidades porque solo quedan {disponible} disponibles."
+            )
+            errores.append(
+                f"Unidades planificadas: {planificada}, unidades ya asignadas: {total_asignado}"
+            )
+
+            # Detalle por empleado
+            if asignaciones.exists():
+                for a in asignaciones:
+                    nombre = a["id_empleado__user__username"]
+                    cant = a["cant_aprobada"]
+                    errores.append(f"Asignaciones actuales: {nombre}: {cant} unidades")
+            else:
+                errores.append("Nadie ha tomado unidades aún.")
+
+        # Si hubo errores, los lanzamos todos juntos
+        if errores:
+            raise forms.ValidationError(errores)
+
+        # -----------------------------
+        # Si es válido → asignar cantidad aprobada
+        # -----------------------------
+        cleaned["cant_aprobada"] = cantidad_solicitada
+
+        return cleaned
+
+
+
 
 
 

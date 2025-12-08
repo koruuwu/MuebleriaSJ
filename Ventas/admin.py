@@ -12,6 +12,89 @@ from proyecto.utils.validators_inventario import ValidacionInventarioMixin
 from django.db import transaction
 from django.utils import timezone
 # Register your models here.
+from django.utils import timezone
+from Sucursales.models import Cai
+from Compras.models import InventarioMueble
+
+def obtener_cai_valido(sucursal):
+    hoy = timezone.now().date()
+
+    with transaction.atomic():
+        cais = Cai.objects.select_for_update().filter(sucursal=sucursal)
+
+        cais_validos = []
+
+        for cai in cais:
+            valido = True
+
+            # Validar fecha
+            if cai.fecha_vencimiento and cai.fecha_vencimiento < hoy:
+                valido = False
+
+            # Validar rango
+            try:
+                ultima = int(cai.ultima_secuencia or "0")
+                final = int(cai.rango_final or "0")
+                if ultima >= final:
+                    valido = False
+            except:
+                valido = False
+
+            # Apagar inválidos
+            if not valido:
+                if cai.activo:
+                    cai.activo = False
+                    cai.save(update_fields=['activo'])
+            else:
+                cais_validos.append(cai)
+
+        if not cais_validos:
+            return None
+
+        # ✅ PERMITIR LOS QUE VENCEN HOY
+        candidatos = [
+            c for c in cais_validos
+            if c.fecha_vencimiento and c.fecha_vencimiento >= hoy
+        ]
+
+        if not candidatos:
+            return None
+
+        ganador = sorted(candidatos, key=lambda x: x.fecha_vencimiento)[0]
+
+        Cai.objects.filter(sucursal=sucursal).update(activo=False)
+        ganador.activo = True
+        ganador.save(update_fields=['activo'])
+
+        return ganador
+
+
+def validar_stock_mueble(mueble, cantidad, sucursal):
+    """
+    Retorna mensaje de error si no hay stock suficiente.
+    """
+    inventario = InventarioMueble.objects.filter(
+        id_mueble=mueble,
+        ubicación=sucursal,
+        estado__id__in=[1, 2]
+    ).first()
+    if not inventario:
+        return f"No hay inventario para {mueble.nombre} en {sucursal}"
+    elif inventario.cantidad_disponible < cantidad:
+        return f"Stock insuficiente para {mueble.nombre}. Disponible: {inventario.cantidad_disponible}, solicitado: {cantidad}"
+    return None
+
+
+def validar_rtn_cliente(usuariofinal, cliente):
+    """
+    Retorna mensaje de error si el cliente no cumple con RTN.
+    """
+    if usuariofinal:
+        if cliente is None:
+            return "Debe seleccionar un cliente para poder usar RTN final."
+        elif not cliente.rtn:
+            return "El cliente no tiene RTN configurado, debe asignarle un RTN en su ficha antes de continuar."
+    return None
 
 
 class OrdenForm(ModelForm):
@@ -24,137 +107,64 @@ class OrdenForm(ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         errores = []
-        hoy = timezone.now().date()
 
-        # Obtener perfil desde request (asegúrate que en get_form adjuntas request al form)
         perfil = PerfilUsuario.objects.filter(user=getattr(self, "current_user", None)).first()
-        # Si prefieres usar request directamente:
-        # perfil = PerfilUsuario.objects.filter(user=getattr(self, "request", None).user if getattr(self, "request", None) else None).first()
-
         if not perfil or not perfil.sucursal or not perfil.caja:
             errores.append("El usuario no tiene sucursal o caja configurada.")
 
-        descuento = cleaned_data.get("descuento") or 0
-                # -------------------------
-        # VALIDACIÓN: EFECTIVO MÍNIMO
-        # -------------------------
-        usuariofinal = cleaned_data.get("rtn")      # Checkbox (True / False)
-        cliente = cleaned_data.get("id_cliente")        # Cliente seleccionado
+        # Validación RTN / Cliente
+        usuariofinal = cleaned_data.get("rtn")
+        cliente = cleaned_data.get("id_cliente")
+        error_rtn = validar_rtn_cliente(usuariofinal, cliente)
+        if error_rtn:
+            errores.append(error_rtn)
 
-        # Validar solo si el checkbox está activado
-        if usuariofinal:
-            # Validar que el usuario haya seleccionado un cliente
-            if cliente is None:
-                errores.append("Debe seleccionar un cliente para poder usar RTN final.")
-            else:
-                # Validar que el cliente tenga un RTN asignado
-                if not cliente.rtn:
-                    errores.append(
-                        "El cliente no tiene RTN configurado. "
-                        "Debe asignarle un RTN en su ficha antes de continuar."
-                    )
-
+        # Validación efectivo mínimo
         total = cleaned_data.get("total") or 0
-        efectivo = cleaned_data.get("efectivo") 
-
+        efectivo = cleaned_data.get("efectivo")
         if efectivo not in (None, ""):
             efectivo = float(efectivo)
-
             try:
                 parametro_efectivo = Parametro.objects.get(id=4)
-                porcentaje_min = float(parametro_efectivo.valor)  # Ej: 10 = 10%
+                porcentaje_min = float(parametro_efectivo.valor)
             except Parametro.DoesNotExist:
                 porcentaje_min = None
 
             if porcentaje_min is not None and total > 0:
                 minimo_requerido = total * (porcentaje_min / 100)
-
                 if efectivo < minimo_requerido:
                     errores.append(
-                        f"El efectivo ingresado ({efectivo}) es menor al mínimo requerido "
-                        f"({minimo_requerido:.2f}) según el porcentaje depósito mínimo {porcentaje_min}%."
+                        f"El efectivo ingresado ({efectivo}) es menor al mínimo requerido ({minimo_requerido:.2f}) según el porcentaje {porcentaje_min}%."
                     )
 
-
+        # Validación descuento máximo
+        descuento = cleaned_data.get("descuento") or 0
         try:
-            parametro_des = Parametro.objects.get(id=3) 
+            parametro_des = Parametro.objects.get(id=3)
             descuento_max = float(parametro_des.valor)
         except Parametro.DoesNotExist:
             descuento_max = None
 
-        if descuento_max is not None:
-            if float(descuento) > descuento_max:
-                errores.append(
-                    f"El descuento máximo que se puede aplicar es del {descuento_max}%."
-                )
-       
+        if descuento_max is not None and float(descuento) > descuento_max:
+            errores.append(f"El descuento máximo que se puede aplicar es del {descuento_max}%.")
 
-
-        # -------------------------
-        # LÓGICA DE BÚSQUEDA / ACTIVACIÓN AUTOMÁTICA DE CAI
-        # -------------------------
-        cai = None
+        # Validación CAI
         if perfil:
-            # Obtener todos los CAIs de la sucursal
-            with transaction.atomic():
-                hoy = timezone.now().date()
-                cais = Cai.objects.select_for_update().filter(sucursal=perfil.sucursal)
-
-                cais_validos = []
-                for c in cais:
-                    valido = True
-                    # Validar fecha
-                    if c.fecha_vencimiento and c.fecha_vencimiento < hoy:
-                        valido = False
-                    # Validar rango
-                    try:
-                        ultima = int(c.ultima_secuencia or "0")
-                        final = int(c.rango_final or "0")
-                        if ultima >= final:
-                            valido = False
-                    except:
-                        valido = False
-
-                    if not valido and c.activo:
-                        c.activo = False
-                        c.save(update_fields=['activo'])
-                    elif valido:
-                        cais_validos.append(c)
-
-                # Si no hay válidos → error
-                if not cais_validos:
-                    errores.append("No hay CAI válido configurado para esta sucursal (vencidos o rango agotado).")
-                else:
-                    # Seleccionar candidatos > hoy
-                    candidatos = [c for c in cais_validos if c.fecha_vencimiento > hoy]
-                    if candidatos:
-                        ganador = sorted(candidatos, key=lambda x: x.fecha_vencimiento)[0]
-                        # Activar solo al ganador
-                        Cai.objects.filter(sucursal=perfil.sucursal).update(activo=False)
-                        ganador.activo = True
-                        ganador.save(update_fields=['activo'])
-                        cai = ganador
-                        if hasattr(self, "request"):
-                            messages.info(self.request, f"Se activó automáticamente el CAI {ganador.codigo_cai}")
-                    else:
-                        errores.append("Todos los CAIs válidos vencen hoy; no se activó ninguno.")
+            cai = obtener_cai_valido(perfil.sucursal)
+            if not cai:
+                errores.append("No hay CAI válido configurado para esta sucursal.")
 
         if errores:
             raise ValidationError(errores)
 
         return cleaned_data
 
-
-
     def save(self, commit=True):
         instance = super().save(commit=False)
         aporte = self.cleaned_data.get('aporte', 0) or 0
-
-        # Sumar aporte
         if aporte:
             instance.pagado = (instance.pagado or 0) + aporte
 
-        # Actualizar estado de pago
         try:
             estado_pagado = EstadoPagos.objects.get(nombre__iexact="Pagado")
             estado_pendiente = EstadoPagos.objects.get(nombre__iexact="Pendiente")
@@ -171,6 +181,11 @@ class OrdenForm(ModelForm):
             instance.save()
 
         return instance
+
+
+
+
+
 
     
 from django.forms import BaseInlineFormSet, ValidationError
@@ -414,141 +429,62 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         perfil = PerfilUsuario.objects.filter(user=request.user).first()
-        
-        if not change:
-            # Obtener parámetro y CAI
-            parametro = Parametro.objects.get(id=2)
-            cai = Cai.objects.filter(sucursal=perfil.sucursal, activo=True).first()
-            
-            # Si no hay CAI activo, buscar uno válido y activarlo automáticamente (INTENTADO ya en el form, pero por seguridad lo repetimos)
-            if not cai:
-                with transaction.atomic():
-                    hoy = timezone.now().date()
-                    cais = Cai.objects.select_for_update().filter(sucursal=perfil.sucursal)
 
-                    cais_validos = []
-                    for c in cais:
-                        valido = True
-                        if c.fecha_vencimiento and c.fecha_vencimiento < hoy:
-                            valido = False
-                        try:
-                            ultima = int(c.ultima_secuencia or "0")
-                            final = int(c.rango_final or "0")
-                            if ultima >= final:
-                                valido = False
-                        except:
-                            valido = False
+        with transaction.atomic():
 
-                        if not valido and c.activo:
-                            c.activo = False
-                            c.save(update_fields=['activo'])
-                        elif valido:
-                            cais_validos.append(c)
+            if not change:
+                parametro = Parametro.objects.get(id=2)
+                cai = obtener_cai_valido(perfil.sucursal)
 
-                    if not cais_validos:
-                        messages.error(request, "No hay CAI activo válido para esta sucursal.")
-                        return  # no continuar
+                if not cai:
+                    raise ValidationError("No hay CAI activo válido para esta sucursal.")
 
-                    candidatos = [c for c in cais_validos if c.fecha_vencimiento > hoy]
-                    if not candidatos:
-                        messages.error(request, "Todos los CAIs válidos vencen hoy; no se puede activar ninguno.")
-                        return  # no continuar
+                siguiente = int(cai.ultima_secuencia or "0") + 1
 
-                    ganador = sorted(candidatos, key=lambda x: x.fecha_vencimiento)[0]
-                    Cai.objects.filter(sucursal=perfil.sucursal).update(activo=False)
-                    ganador.activo = True
-                    ganador.save(update_fields=['activo'])
-                    cai = ganador
-                    messages.info(request, f"Se activó automáticamente el CAI {ganador.codigo_cai}")
+                obj.id_factura = (
+                    f"{perfil.sucursal.codigo_sucursal}-"
+                    f"{perfil.caja.codigo_caja}-"
+                    f"{parametro.valor}-"
+                    f"{str(siguiente).zfill(8)}"
+                )
 
-            
-            siguiente = int(cai.ultima_secuencia or "0") + 1
+                obj.cai_usado = cai
 
-            numero_factura = (
-                f"{perfil.sucursal.codigo_sucursal}-"
-                f"{perfil.caja.codigo_caja}-"
-                f"{parametro.valor}-"
-                f"{str(siguiente).zfill(8)}"
-            )
+                cai.ultima_secuencia = str(siguiente).zfill(8)
 
-            obj.id_factura = numero_factura
-            obj.cai_usado = cai 
+                # ✅ GUARDAR SIEMPRE LA ORDEN ANTES DE TOCAR INLINES
+                super().save_model(request, obj, form, change)
 
-        # Guardar la orden (llama al super)
-        super().save_model(request, obj, form, change)
+                # ✅ AHORA ya existe el id_orden y es seguro guardar detalles
+                if siguiente >= int(cai.rango_final):
+                    cai.activo = False
+                    cai.save(update_fields=['ultima_secuencia', 'activo'])
 
-        # Actualizar CAI solo cuando la orden se ha guardado exitosamente
-        if not change and cai:
-            with transaction.atomic():
-                cai_seguro = Cai.objects.select_for_update().get(id=cai.id)
-                hoy = timezone.now().date()
-                desactivar_actual = False
-                
-                if cai_seguro.fecha_vencimiento and cai_seguro.fecha_vencimiento < hoy:
-                    desactivar_actual = True
-                    messages.warning(request, f"El CAI {cai_seguro.codigo_cai} está vencido y será desactivado.")
-                else:
-                    try:
-                        ultima_actual = int(cai_seguro.ultima_secuencia or "0")
-                        final_actual = int(cai_seguro.rango_final or "0")
-                        if ultima_actual >= final_actual:
-                            desactivar_actual = True
-                            messages.warning(request, f"El CAI {cai_seguro.codigo_cai} alcanzó su rango final.")
-                    except ValueError:
-                        desactivar_actual = True
-                
-                if desactivar_actual:
-                    cai_seguro.activo = False
-                    cai_seguro.save(update_fields=['activo'])
-                    
-                    # Buscar y activar un nuevo CAI automáticamente
-                    nuevo_cai = Cai.objects.filter(
-                        sucursal=perfil.sucursal,
-                        fecha_vencimiento__gte=hoy,
-                        activo=False
-                    ).order_by('fecha_vencimiento').first()
-                    
+                    messages.warning(
+                        request,
+                        f"El CAI {cai.codigo_cai} alcanzó su rango final y fue desactivado."
+                    )
+
+                    nuevo_cai = obtener_cai_valido(perfil.sucursal)
+
                     if nuevo_cai:
-                        try:
-                            ultima_nuevo = int(nuevo_cai.ultima_secuencia or "0")
-                            final_nuevo = int(nuevo_cai.rango_final or "0")
-                            
-                            if ultima_nuevo < final_nuevo:
-                                nuevo_cai.activo = True
-                                nuevo_cai.save(update_fields=['activo'])
-                                cai_seguro = nuevo_cai
-                                
-                                messages.info(request, f"Se activó automáticamente el nuevo CAI {nuevo_cai.codigo_cai}")
-                            else:
-                                messages.error(request, "No hay CAIs válidos disponibles (todos han alcanzado su rango final).")
-                        except ValueError:
-                            messages.error(request, "Error en formato de secuencia del nuevo CAI.")
+                        messages.success(
+                            request,
+                            f"Nuevo CAI activado automáticamente: {nuevo_cai.codigo_cai}"
+                        )
                     else:
-                        messages.error(request, "No hay CAIs disponibles para activar automáticamente.")
-                        # Eliminar la orden creada y salir
-                        obj.delete()
-                        return
-                
-                # Ahora usar el CAI (original o nuevo)
-                siguiente_num = int(cai_seguro.ultima_secuencia or "0") + 1
-                if siguiente_num > int(cai_seguro.rango_final):
-                    cai_seguro.activo = False
-                    cai_seguro.save(update_fields=['activo'])
-                    raise ValidationError("El CAI alcanzó el límite permitido.")
+                        messages.error(
+                            request,
+                            "No hay un nuevo CAI disponible para activar."
+                        )
 
-                cai_seguro.ultima_secuencia = str(siguiente_num).zfill(8)
-                if siguiente_num >= int(cai_seguro.rango_final):
-                    cai_seguro.activo = False
-                    messages.warning(request, f"El CAI {cai_seguro.codigo_cai} alcanzó su rango final y fue desactivado.")
-                
-                cai_seguro.save()
+                else:
+                    cai.save(update_fields=['ultima_secuencia'])
 
-                # Asegurar sólo 1 activo
-                cais_activos = Cai.objects.filter(sucursal=perfil.sucursal, activo=True).order_by('fecha_vencimiento')
-                if cais_activos.count() > 1:
-                    cai_principal = cais_activos.first()
-                    Cai.objects.filter(sucursal=perfil.sucursal, activo=True).exclude(pk=cai_principal.pk).update(activo=False)
-                    messages.warning(request, f"Se detectaron múltiples CAIs activos. Solo se mantiene activo {cai_principal.codigo_cai}")
+            else:
+                # Si es edición normal
+                super().save_model(request, obj, form, change)
+
 
 
 
