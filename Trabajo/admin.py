@@ -50,12 +50,12 @@ class AportacionForm(ModelForm):
 
 class AportacionMInline(nested_admin.NestedStackedInline):
     model = AportacionEmpleado
-    extra = 1
+    extra = 0
 
 class DetalleOrdenMInline(nested_admin.NestedStackedInline):
     model = OrdenMensualDetalle
-    extra = 1
-    min_num = 1  # Cambia a 1 para forzar al menos un detalle
+    extra = 0
+    min_num = 0  # Cambia a 1 para forzar al menos un detalle
   
     inlines = [AportacionMInline]
     
