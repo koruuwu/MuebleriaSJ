@@ -529,10 +529,10 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         sucursal_info = ""
         if sucursal:
             sucursal_info = (
-                f"RTN: {sucursal.rtn}<br/>"
+                f"R.T.N. No {sucursal.rtn}<br/>"
                 f"{sucursal.nombre}<br/>"
                 f"{sucursal.direccion}<br/>"
-                f"Tel: {sucursal.telefono or 'No registrado'}"
+                f"Tel. (504) {sucursal.telefono or 'No registrado'}"
             )
         else:
             sucursal_info = "Sucursal no registrada"
@@ -617,9 +617,9 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         # -----------------------------------------------------------
         # ENCABEZADO PROFESIONAL (mantener igual)
         # -----------------------------------------------------------
-        story.append(Paragraph("FACTURA", title_style))
+        story.append(Paragraph("MUEBLERIA SAN JOSE", title_style))
         story.append(Spacer(1, 0.05 * inch))
-        story.append(Paragraph("Suspenso", company_style))
+        story.append(Paragraph("Factura", company_style))
         story.append(Spacer(1, 0.1 * inch))
         story.append(Paragraph(sucursal_info, info_style))
         
@@ -703,7 +703,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
             [Paragraph("<b>Nombre:</b>", label_style), 
             Paragraph(cliente.nombre, data_style)],
             [Paragraph("<b>RTN:</b>", label_style), 
-            Paragraph(eretene, data_style)],
+            Paragraph(eretene or "No registrado", data_style)],
             [Paragraph("<b>Teléfono:</b>", label_style), 
             Paragraph(cliente.telefono or "No registrado", data_style)],
             [Paragraph("<b>Dirección:</b>", label_style), 
@@ -874,14 +874,54 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
             
             def draw_page_number(self, page_count):
                 page = f"Página {self._pageNumber} de {page_count}"
-                
-                # Posicionar en la esquina inferior derecha
+
+                # Número de página en esquina inferior derecha
                 self.setFont("Helvetica", 9)
                 self.drawRightString(
-                    7.8 * inch,  # Posición X (derecha)
-                    0.4 * inch,  # Posición Y (abajo)
+                    7.8 * inch,
+                    0.4 * inch,
                     page
                 )
+
+                # ---------------------------------------------
+                #   LOGO EN ESQUINA INFERIOR IZQUIERDA
+                # ---------------------------------------------
+                try:
+                    from reportlab.lib.utils import ImageReader
+
+                    logo_path = "static/img/logo.png"  # <--- CAMBIA ESTA RUTA
+
+                    # Tamaño pequeño (ajusta a gusto)
+                    width = 90
+                    height = 90
+
+                    # Posición (muy abajo, esquina izquierda)
+                    x = 0.5 * inch
+                    y = 0.2 * inch
+
+                    # Guardar estado gráfico
+                    self.saveState()
+
+                    # Opacidad (0.0 = invisible, 1.0 = normal)
+                    self.setFillAlpha(0.50)
+                    self.setStrokeAlpha(0.20)
+
+                    # Dibujar imagen
+                    self.drawImage(
+                        ImageReader(logo_path),
+                        x, y,
+                        width=width,
+                        height=height,
+                        preserveAspectRatio=True,
+                        mask='auto'
+                    )
+
+                    # Restaurar estado
+                    self.restoreState()
+
+                except Exception as e:
+                    print("Error cargando logo:", e)
+
 
         # Construir PDF con numeración de páginas
         doc.build(
