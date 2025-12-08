@@ -1,13 +1,21 @@
 from django.db import models
 from  Muebles.models import Mueble
 from Empleados.models import PerfilUsuario
+from Sucursales.models import Sucursale
 # Create your models here.
 class OrdenMensuale(models.Model):
     id = models.BigAutoField(primary_key=True)
+    id_sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='id_sucursal', blank=True, null=True)
+    nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
     fecha_creacion = models.DateTimeField(db_column='Fecha_creacion')  # Field name made lowercase.
     fecha_fin = models.DateField(db_column='Fecha_fin', blank=True, null=True)  # Field name made lowercase.
     estado = models.CharField(blank=True, null=True)
     observaciones = models.CharField(blank=True, null=True)
+
+    def __str__(self):
+        if self.nombre:
+            return self.nombre
+        return f"Orden #{self.id} (Sin nombre)"
 
     class Meta:
         managed = False
@@ -21,6 +29,10 @@ class OrdenMensualDetalle(models.Model):
     cantidad_producida = models.BigIntegerField(blank=True, null=True)
     estado = models.BigIntegerField(blank=True, null=True)
     entrega_estim = models.DateField(blank=True, null=True)
+
+    def __str__(self):
+        return str(self.id_mueble)
+
 
     class Meta:
         managed = False
