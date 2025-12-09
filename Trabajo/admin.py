@@ -6,8 +6,12 @@ from django.forms import ModelForm
 from django import forms
 from django.urls import path
 from django.http import JsonResponse
+from Compras.models import  InventarioMateriale
+from Muebles.models import MuebleMateriale
+
 class AportacionForm(ModelForm):
     orden_selector = forms.ModelChoiceField(
+
         queryset=OrdenMensuale.objects.all(),
         required=False,
         label="Orden para trabajar (solo referencia)",
@@ -92,6 +96,44 @@ class AportacionForm(ModelForm):
 
         planificada = detalle.cantidad_planificada or 0
         disponible = planificada - total_asignado
+
+        # -----------------------------
+        # VALIDACIÓN DE INVENTARIO DE MATERIALES
+        # -----------------------------
+
+        mueble = detalle.id_mueble
+
+        # Materiales que usa el mueble
+        materiales_mueble = MuebleMateriale.objects.filter(id_mueble=mueble)
+
+        if not materiales_mueble.exists():
+            errores.append(
+                f"El mueble '{mueble.nombre}' no tiene materiales asignados. No se puede aprobar producción."
+            )
+        else:
+            for mm in materiales_mueble:
+                material = mm.id_material
+                cantidad_por_mueble = mm.cantidad
+
+                # Total de material requerido
+                total_necesario = cantidad_solicitada * cantidad_por_mueble
+
+                # Inventario del material (puedes filtrar por sucursal si aplica)
+                inventario = InventarioMateriale.objects.filter(
+                    id_material=material,
+                    ubicación=detalle.id_orden.id_sucursal
+                ).first()
+
+
+                disponible_material = inventario.cantidad_disponible if inventario else 0
+
+                if total_necesario > disponible_material:
+                    errores.append(
+                        f"Material insuficiente: {material.nombre}"
+                    )
+                    errores.append(
+                        f"Necesario: {total_necesario} — Disponible: {disponible_material} Consumo por unidad: {cantidad_por_mueble}"
+                    )
 
         # -----------------------------
         # Validación principal
