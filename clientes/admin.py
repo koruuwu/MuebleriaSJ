@@ -54,7 +54,7 @@ class DocumentosClienteInline(admin.TabularInline):
 class ClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     form = ClienteForm
     search_fields = ('nombre','telefono')
-    list_display = ('nombre','telefono','direccion')
+    list_display = ('nombre','telefono','direccion','total_pedidos')
     list_display_links = ('nombre',)
     list_filter = ()
     inlines = [DocumentosClienteInline]

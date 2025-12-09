@@ -9,6 +9,12 @@ class Cliente(models.Model):
     telefono = models.CharField(db_column='Telefono')  # Field name made lowercase.
     direccion = models.CharField(db_column='Direccion')  # Field name made lowercase.
     rtn = models.CharField(db_column='RTN', blank=True, null=True)  # Field name made lowercase.
+    
+    def total_pedidos(self):
+        return self.ordenesventa_set.count()
+
+    total_pedidos.short_description = "Pedidos Totales"
+
 
     def __str__(self):
         return self.nombre
