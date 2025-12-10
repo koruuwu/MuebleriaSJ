@@ -349,6 +349,10 @@ class AportacionAdmin(admin.ModelAdmin):
         return JsonResponse({
             "id_empleado": perfil.id if perfil else None
         })
+    
+    fieldsets = [
+        ("General", {"fields": ("id_empleado", "orden_selector", "id_orden_detalle","cantidad_solicitada","Aporte","cant_aprobada","cantidad_finalizada","estado")}),
+    ]
 
     
 
