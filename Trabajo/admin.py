@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 import nested_admin
 from Trabajo.models import AportacionEmpleado, OrdenMensuale, OrdenMensualDetalle
 from Empleados.models import PerfilUsuario
@@ -17,6 +17,7 @@ class AportacionForm(ModelForm):
         label="Orden para trabajar (solo referencia)",
         help_text="Seleccione la orden; luego elija el detalle correspondiente."
     )
+    Aporte = forms.IntegerField(initial=0, required=False, label="Aporte")
 
     cantidad_solicitada = forms.IntegerField(initial=0, required=False, label="Cantidad Solicitada")
 
@@ -27,14 +28,26 @@ class AportacionForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.fields['id_orden_detalle'].help_text = (
             "<span id='detalle_helptext'>Seleccione un detalle para ver información.</span>"
         )
 
-        # Inicia el campo de detalle vacío
         self.fields["id_orden_detalle"].queryset = OrdenMensualDetalle.objects.none()
+        aporte_field = self.fields.get('Aporte')
+        if aporte_field:
+            # Si el objeto es nuevo (no pk) -> no hay cant_aprobada todavía -> deshabilitar
+            if not self.instance.pk:
+                aporte_field.disabled = True
+                aporte_field.help_text = "Se habilitará cuando exista una cantidad aprobada."
+            else:
+                # Si existe la instancia, verificar cant_aprobada
+                if getattr(self.instance, 'cant_aprobada', None) is None:
+                    aporte_field.disabled = True
+                    aporte_field.help_text = "Se habilitará cuando exista una cantidad aprobada."
+                else:
+                    aporte_field.disabled = False
 
-        # Cuando el usuario selecciona una orden en una edición ya cargada
         if "orden_selector" in self.data:
             try:
                 orden_id = int(self.data.get("orden_selector"))
@@ -44,20 +57,31 @@ class AportacionForm(ModelForm):
             except:
                 pass
         elif self.instance.pk:
-            # Si se está editando una aportación ya existente
             if self.instance.id_orden_detalle:
                 orden = self.instance.id_orden_detalle.id_orden
                 self.fields["orden_selector"].initial = orden
                 self.fields["id_orden_detalle"].queryset = (
                     OrdenMensualDetalle.objects.filter(id_orden=orden)
                 )
+
+            #DESACTIVAR cantidad_solicitada SI YA EXISTE cant_aprobada
+            if self.instance.cant_aprobada is not None:
+                self.fields["cantidad_solicitada"].disabled = True
+                self.fields["cantidad_solicitada"].required = False
+
+
+            if self.instance.estado == AportacionEmpleado.COMP:
+                for field_name, field in self.fields.items():
+                    field.disabled = True
+         
     def clean(self):
         cleaned = super().clean()
         errores = []
 
         detalle = cleaned.get("id_orden_detalle")
         empleado = cleaned.get("id_empleado")
-        cantidad_solicitada = cleaned.get("cantidad_solicitada")
+        cantidad_solicitada = cleaned.get("cantidad_solicitada") or 0
+
 
         # -----------------------------
         # Validaciones básicas
@@ -68,8 +92,13 @@ class AportacionForm(ModelForm):
         if not empleado:
             errores.append("No se detectó un empleado. Intente recargar la página.")
 
-        if not cantidad_solicitada or cantidad_solicitada <= 0:
-            errores.append("La cantidad solicitada debe ser mayor que 0.")
+       # Solo validar cantidad_solicitada si AÚN NO hay cant_aprobada
+        if self.instance.pk and self.instance.cant_aprobada is not None:
+            pass  # Ya hay cantidad aprobada → no se vuelve a solicitar
+        else:
+            if not cantidad_solicitada or cantidad_solicitada <= 0:
+                errores.append("La cantidad solicitada debe ser mayor que 0.")
+
 
         # Si ya hay errores básicos, detenemos aquí
         if errores:
@@ -101,39 +130,36 @@ class AportacionForm(ModelForm):
         # VALIDACIÓN DE INVENTARIO DE MATERIALES
         # -----------------------------
 
-        mueble = detalle.id_mueble
+       
+        if not (self.instance.pk and self.instance.cant_aprobada is not None):
 
-        # Materiales que usa el mueble
-        materiales_mueble = MuebleMateriale.objects.filter(id_mueble=mueble)
+            mueble = detalle.id_mueble
+            materiales_mueble = MuebleMateriale.objects.filter(id_mueble=mueble)
 
-        if not materiales_mueble.exists():
-            errores.append(
-                f"El mueble '{mueble.nombre}' no tiene materiales asignados. No se puede aprobar producción."
-            )
-        else:
-            for mm in materiales_mueble:
-                material = mm.id_material
-                cantidad_por_mueble = mm.cantidad
+            if not materiales_mueble.exists():
+                errores.append(
+                    f"El mueble '{mueble.nombre}' no tiene materiales asignados. No se puede aprobar producción."
+                )
+            else:
+                for mm in materiales_mueble:
+                    material = mm.id_material
+                    cantidad_por_mueble = mm.cantidad or 0
 
-                # Total de material requerido
-                total_necesario = cantidad_solicitada * cantidad_por_mueble
+                    total_necesario = (cantidad_solicitada or 0) * cantidad_por_mueble
 
-                # Inventario del material (puedes filtrar por sucursal si aplica)
-                inventario = InventarioMateriale.objects.filter(
-                    id_material=material,
-                    ubicación=detalle.id_orden.id_sucursal
-                ).first()
+                    inventario = InventarioMateriale.objects.filter(
+                        id_material=material,
+                        ubicación=detalle.id_orden.id_sucursal
+                    ).first()
 
+                    disponible_material = inventario.cantidad_disponible if inventario else 0
 
-                disponible_material = inventario.cantidad_disponible if inventario else 0
-
-                if total_necesario > disponible_material:
-                    errores.append(
-                        f"Material insuficiente: {material.nombre}"
-                    )
-                    errores.append(
-                        f"Necesario: {total_necesario} — Disponible: {disponible_material} Consumo por unidad: {cantidad_por_mueble}"
-                    )
+                    if total_necesario > disponible_material:
+                        errores.append(f"Material insuficiente: {material.nombre}")
+                        errores.append(
+                            f"Necesario: {total_necesario} — Disponible: {disponible_material} "
+                            f"Consumo por unidad: {cantidad_por_mueble}"
+                        )
 
         # -----------------------------
         # Validación principal
@@ -162,7 +188,16 @@ class AportacionForm(ModelForm):
         # -----------------------------
         # Si es válido → asignar cantidad aprobada
         # -----------------------------
-        cleaned["cant_aprobada"] = cantidad_solicitada
+        #Solo establecer cant_aprobada cuando aún no existe
+        if self.instance.pk and self.instance.cant_aprobada is not None:
+            cleaned["cant_aprobada"] = self.instance.cant_aprobada
+        else:
+            cleaned["cant_aprobada"] = cantidad_solicitada
+
+        if (not self.instance.pk) or (getattr(self.instance, 'cant_aprobada', None) is None):
+            # Si el campo está en cleaned lo sobreescribimos a 0
+            cleaned['Aporte'] = 0
+
 
         return cleaned
 
@@ -188,13 +223,84 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
 class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
     inlines = [DetalleOrdenMInline]
 
+
 @admin.register(AportacionEmpleado)
 class AportacionAdmin(admin.ModelAdmin):
     form = AportacionForm
-    list_display = ("id",)
+    list_display = ("id","estado")
+    readonly_fields= ('estado',)
+    # si tienes otros campos que quieres mostrar, agrégalos aquí
 
     class Media:
-        js = ('js/filtros/filtro_orden_aportaciones.js',)  # Archivo JS similar al de ListaCompra
+        js = ('js/filtros/filtro_orden_aportaciones.js','js/filtros/read_only_orden_aportaciones.js',)  # Archivo JS similar al de ListaCompra
+
+    
+    def save_model(self, request, obj, form, change):
+        """
+        - Usa el campo fantasma 'Aporte'
+        - Controla que no supere lo aprobado
+        - Cambia estado a:
+            * 'trabajando' cuando hay avance
+            * 'completo' cuando finalizada == aprobada
+        """
+
+        aporte = 0
+        try:
+            aporte = int(form.cleaned_data.get('Aporte') or 0)
+        except Exception:
+            aporte = 0
+
+        if aporte < 0:
+            aporte = 0
+
+        finalizada_actual = obj.cantidad_finalizada or 0
+
+        # Tope según lo aprobado
+        max_remaining = None
+        if obj.cant_aprobada is not None:
+            max_remaining = obj.cant_aprobada - finalizada_actual
+            if max_remaining < 0:
+                max_remaining = 0
+
+        # Ajuste de aporte si excede
+        if max_remaining is not None and aporte > max_remaining:
+            aporte_usado = max_remaining
+            messages.warning(
+                request,
+                f"El aporte solicitado ({aporte}) excede el restante aprobado ({max_remaining}). "
+                f"Se aplicará solamente {aporte_usado}."
+            )
+        else:
+            aporte_usado = aporte
+
+        # Actualizamos cantidad_finalizada
+        nueva_finalizada = finalizada_actual + aporte_usado
+        obj.cantidad_finalizada = nueva_finalizada
+
+        # -------------------------
+        # CAMBIOS DE ESTADO
+        # -------------------------
+
+        #SI YA COMPLETÓ
+        if obj.cant_aprobada is not None and nueva_finalizada >= obj.cant_aprobada:
+            obj.cantidad_finalizada = obj.cant_aprobada  # blindaje
+            obj.estado = AportacionEmpleado.COMP
+            messages.success(
+                request,
+                "Aportación completada al 100%. Estado cambiado a COMPLETO."
+            )
+
+        # SI SOLO ESTÁ AVANZANDO
+        elif nueva_finalizada > 0 and obj.estado != AportacionEmpleado.TRAB:
+            obj.estado = AportacionEmpleado.TRAB
+            messages.info(
+                request,
+                f"Aportación marcada como 'Trabajando' porque hay {nueva_finalizada} unidades finalizadas."
+            )
+
+        # Guardamos normalmente
+        super().save_model(request, obj, form, change)
+
 
     def get_urls(self):
         urls = super().get_urls()
@@ -214,7 +320,6 @@ class AportacionAdmin(admin.ModelAdmin):
         return custom + urls
 
     # --- Vista AJAX ---
-    
     def filtrar_detalles_por_orden(self, request, orden_id):
         detalles = OrdenMensualDetalle.objects.filter(id_orden_id=orden_id)
 

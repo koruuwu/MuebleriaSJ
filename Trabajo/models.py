@@ -1,15 +1,29 @@
+
 from django.db import models
 from  Muebles.models import Mueble
 from Empleados.models import PerfilUsuario
 from Sucursales.models import Sucursale
 # Create your models here.
 class OrdenMensuale(models.Model):
+    PEND = 'pendiente'
+    APROB='aprobada'
+    COMP = 'completo'
+    INCOMP = 'incompleto'
+
+    EI_CHOICES = [
+        (PEND, 'Pendiente'),
+        (APROB, 'Aprobada'),
+        (INCOMP, 'Incompleto'),
+        (COMP, 'Completo'),
+    ]
+    
+
     id = models.BigAutoField(primary_key=True)
     id_sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='id_sucursal', blank=True, null=True)
     nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
     fecha_creacion = models.DateTimeField(db_column='Fecha_creacion')  # Field name made lowercase.
     fecha_fin = models.DateField(db_column='Fecha_fin', blank=True, null=True)  # Field name made lowercase.
-    estado = models.CharField(blank=True, null=True)
+    estado = models.CharField(blank=False, null=True, choices=EI_CHOICES, default=1) 
     observaciones = models.CharField(blank=True, null=True)
 
     def __str__(self):
@@ -21,13 +35,27 @@ class OrdenMensuale(models.Model):
         managed = False
         db_table = 'Orden_Mensuales'
 
+
+PEND = 'pendiente'
+INCOMP = 'incompleto'
+COMP = 'completo'
+    
+
+EU_CHOICES = [
+    (PEND, 'Pendiente'),
+    (INCOMP, 'Incompleto'),
+     (COMP, 'Completo'),
+]
+    
+
+
 class OrdenMensualDetalle(models.Model):
     id = models.BigAutoField(primary_key=True)
     id_orden = models.ForeignKey('OrdenMensuale', models.DO_NOTHING, db_column='id_orden', blank=True, null=True)
     id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='id_mueble', blank=True, null=True)
     cantidad_planificada = models.BigIntegerField(blank=True, null=True)
     cantidad_producida = models.BigIntegerField(blank=True, null=True)
-    estado = models.BigIntegerField(blank=True, null=True)
+    estado = models.CharField(blank=False, null=False, choices=EU_CHOICES, default=1)
     entrega_estim = models.DateField(blank=True, null=True)
 
     def __str__(self):
@@ -39,12 +67,22 @@ class OrdenMensualDetalle(models.Model):
         db_table = 'Orden_mensual_detalle'
 
 class AportacionEmpleado(models.Model):
+    PEND = 'pendiente'
+    TRAB = 'trabajando'
+    COMP = 'completo'        
+
+    EA_CHOICES = [
+        (PEND, 'Pendiente'),
+        (TRAB, 'Trabajando'),
+        (COMP, 'Completo'),
+    ]
+    
     id = models.BigAutoField(primary_key=True)
     id_orden_detalle = models.ForeignKey('OrdenMensualDetalle', models.DO_NOTHING, db_column='id_orden_detalle', blank=True, null=True)
     id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True) # Field name made lowercase.
     cant_aprobada = models.BigIntegerField(blank=True, null=True)
     cantidad_finalizada = models.BigIntegerField(blank=True, null=True)
-    estado = models.BigIntegerField(blank=True, null=True)
+    estado = models.CharField(blank=False, null=False, choices=EA_CHOICES, default=PEND)
 
     class Meta:
         managed = False
