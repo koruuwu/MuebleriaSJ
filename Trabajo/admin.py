@@ -82,9 +82,8 @@ class AportacionForm(ModelForm):
         empleado = cleaned.get("id_empleado")
         cantidad_solicitada = cleaned.get("cantidad_solicitada") or 0
 
-
         # -----------------------------
-        # Validaciones básicas
+        # 1. VALIDACIONES BÁSICAS
         # -----------------------------
         if not detalle:
             errores.append("Debe seleccionar un detalle de orden para trabajar.")
@@ -92,47 +91,22 @@ class AportacionForm(ModelForm):
         if not empleado:
             errores.append("No se detectó un empleado. Intente recargar la página.")
 
-       # Solo validar cantidad_solicitada si AÚN NO hay cant_aprobada
+        # Solo validar cantidad_solicitada si AÚN NO hay cant_aprobada
         if self.instance.pk and self.instance.cant_aprobada is not None:
             pass  # Ya hay cantidad aprobada → no se vuelve a solicitar
         else:
             if not cantidad_solicitada or cantidad_solicitada <= 0:
                 errores.append("La cantidad solicitada debe ser mayor que 0.")
 
-
-        # Si ya hay errores básicos, detenemos aquí
+        # Si hay errores básicos, detenemos aquí
         if errores:
             raise forms.ValidationError(errores)
 
         # -----------------------------
-        # Cálculo de unidades asignadas
+        # 2. VALIDACIÓN DE MATERIALES
         # -----------------------------
-        from django.db.models import Sum
-
-        asignaciones = (
-            AportacionEmpleado.objects
-            .filter(id_orden_detalle=detalle)
-            .exclude(id=self.instance.id)
-            .values("id_empleado__user__username", "cant_aprobada")
-        )
-
-        total_asignado = (
-            AportacionEmpleado.objects
-            .filter(id_orden_detalle=detalle)
-            .exclude(id=self.instance.id)
-            .aggregate(total=Sum("cant_aprobada"))["total"] or 0
-        )
-
-        planificada = detalle.cantidad_planificada or 0
-        disponible = planificada - total_asignado
-
-        # -----------------------------
-        # VALIDACIÓN DE INVENTARIO DE MATERIALES
-        # -----------------------------
-
-       
-        if not (self.instance.pk and self.instance.cant_aprobada is not None):
-
+        # Solo se valida si cantidad solicitada es válida y detalle existe
+        if detalle and cantidad_solicitada > 0 and (self.instance.pk is None or self.instance.cant_aprobada is None):
             mueble = detalle.id_mueble
             materiales_mueble = MuebleMateriale.objects.filter(id_mueble=mueble)
 
@@ -144,26 +118,37 @@ class AportacionForm(ModelForm):
                 for mm in materiales_mueble:
                     material = mm.id_material
                     cantidad_por_mueble = mm.cantidad or 0
-
-                    total_necesario = (cantidad_solicitada or 0) * cantidad_por_mueble
+                    total_necesario = cantidad_solicitada * cantidad_por_mueble
 
                     inventario = InventarioMateriale.objects.filter(
                         id_material=material,
                         ubicación=detalle.id_orden.id_sucursal
                     ).first()
-
                     disponible_material = inventario.cantidad_disponible if inventario else 0
 
                     if total_necesario > disponible_material:
-                        errores.append(f"Material insuficiente: {material.nombre}")
                         errores.append(
-                            f"Necesario: {total_necesario} — Disponible: {disponible_material} "
-                            f"Consumo por unidad: {cantidad_por_mueble}"
+                            f"Material insuficiente: {material.nombre} — Necesario: {total_necesario}, Disponible: {disponible_material} (Consumo por unidad: {cantidad_por_mueble})"
                         )
 
+        # Si hubo errores hasta ahora, lanzarlos antes de validar cantidad disponible
+        if errores:
+            raise forms.ValidationError(errores)
+
         # -----------------------------
-        # Validación principal
+        # 3. VALIDACIÓN DE PLANIFICACIÓN / DISPONIBLE
         # -----------------------------
+        from django.db.models import Sum
+
+        total_asignado = (
+            AportacionEmpleado.objects
+            .filter(id_orden_detalle=detalle)
+            .exclude(id=self.instance.id)
+            .aggregate(total=Sum("cant_aprobada"))["total"] or 0
+        )
+        planificada = detalle.cantidad_planificada or 0
+        disponible = planificada - total_asignado
+
         if cantidad_solicitada > disponible:
             errores.append(
                 f"No es posible asignar {cantidad_solicitada} unidades porque solo quedan {disponible} disponibles."
@@ -173,6 +158,13 @@ class AportacionForm(ModelForm):
             )
 
             # Detalle por empleado
+            asignaciones = (
+                AportacionEmpleado.objects
+                .filter(id_orden_detalle=detalle)
+                .exclude(id=self.instance.id)
+                .values("id_empleado__user__username", "cant_aprobada")
+            )
+
             if asignaciones.exists():
                 for a in asignaciones:
                     nombre = a["id_empleado__user__username"]
@@ -181,25 +173,24 @@ class AportacionForm(ModelForm):
             else:
                 errores.append("Nadie ha tomado unidades aún.")
 
-        # Si hubo errores, los lanzamos todos juntos
+        # Lanzar errores finales
         if errores:
             raise forms.ValidationError(errores)
 
         # -----------------------------
-        # Si es válido → asignar cantidad aprobada
+        # 4. ASIGNAR CANTIDAD APROBADA
         # -----------------------------
-        #Solo establecer cant_aprobada cuando aún no existe
         if self.instance.pk and self.instance.cant_aprobada is not None:
             cleaned["cant_aprobada"] = self.instance.cant_aprobada
         else:
             cleaned["cant_aprobada"] = cantidad_solicitada
 
-        if (not self.instance.pk) or (getattr(self.instance, 'cant_aprobada', None) is None):
-            # Si el campo está en cleaned lo sobreescribimos a 0
+        # Inicializar campo Aporte si no hay instancia previa
+        if not self.instance.pk or getattr(self.instance, 'cant_aprobada', None) is None:
             cleaned['Aporte'] = 0
 
-
         return cleaned
+
 
 
 
