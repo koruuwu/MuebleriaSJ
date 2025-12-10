@@ -36,20 +36,21 @@ class OrdenMensuale(models.Model):
         db_table = 'Orden_Mensuales'
 
 
-PEND = 'pendiente'
-INCOMP = 'incompleto'
-COMP = 'completo'
-    
 
-EU_CHOICES = [
-    (PEND, 'Pendiente'),
-    (INCOMP, 'Incompleto'),
-     (COMP, 'Completo'),
-]
     
 
 
 class OrdenMensualDetalle(models.Model):
+    PEND = 'pendiente'
+    INCOMP = 'incompleto'
+    COMP = 'completo'
+        
+
+    EU_CHOICES = [
+        (PEND, 'Pendiente'),
+        (INCOMP, 'Incompleto'),
+        (COMP, 'Completo'),
+    ]
     id = models.BigAutoField(primary_key=True)
     id_orden = models.ForeignKey('OrdenMensuale', models.DO_NOTHING, db_column='id_orden', blank=True, null=True)
     id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='id_mueble', blank=True, null=True)

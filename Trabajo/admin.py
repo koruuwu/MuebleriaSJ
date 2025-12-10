@@ -8,7 +8,7 @@ from django.urls import path
 from django.http import JsonResponse
 from Compras.models import  InventarioMateriale
 from Muebles.models import MuebleMateriale
-
+from django.db.models import Sum
 class AportacionForm(ModelForm):
     orden_selector = forms.ModelChoiceField(
 
@@ -107,6 +107,49 @@ class AportacionForm(ModelForm):
         # -----------------------------
         # Solo se valida si cantidad solicitada es válida y detalle existe
         if detalle and cantidad_solicitada > 0 and (self.instance.pk is None or self.instance.cant_aprobada is None):
+            # -----------------------------
+            # 1. VALIDACIÓN DE CANTIDAD DISPONIBLE
+            # -----------------------------
+            total_asignado = (
+                AportacionEmpleado.objects
+                .filter(id_orden_detalle=detalle)
+                .exclude(id=self.instance.id)
+                .aggregate(total=Sum("cant_aprobada"))["total"] or 0
+            )
+            planificada = detalle.cantidad_planificada or 0
+            disponible = planificada - total_asignado
+
+            if cantidad_solicitada > disponible:
+                errores.append(
+                    f"No es posible asignar {cantidad_solicitada} unidades porque solo quedan {disponible} disponibles."
+                )
+                errores.append(
+                    f"Unidades planificadas: {planificada}, unidades ya asignadas: {total_asignado}"
+                )
+
+                # Detalle por empleado
+                asignaciones = (
+                    AportacionEmpleado.objects
+                    .filter(id_orden_detalle=detalle)
+                    .exclude(id=self.instance.id)
+                    .values("id_empleado__user__username", "cant_aprobada")
+                )
+
+                if asignaciones.exists():
+                    for a in asignaciones:
+                        nombre = a["id_empleado__user__username"]
+                        cant = a["cant_aprobada"]
+                        errores.append(f"Asignaciones actuales: {nombre}: {cant} unidades")
+                else:
+                    errores.append("Nadie ha tomado unidades aún.")
+
+            # Si ya hay errores de cantidad, no seguimos con materiales
+            if errores:
+                raise forms.ValidationError(errores)
+
+            # -----------------------------
+            # 2. VALIDACIÓN DE MATERIALES
+            # -----------------------------
             mueble = detalle.id_mueble
             materiales_mueble = MuebleMateriale.objects.filter(id_mueble=mueble)
 
@@ -131,51 +174,8 @@ class AportacionForm(ModelForm):
                             f"Material insuficiente: {material.nombre} — Necesario: {total_necesario}, Disponible: {disponible_material} (Consumo por unidad: {cantidad_por_mueble})"
                         )
 
-        # Si hubo errores hasta ahora, lanzarlos antes de validar cantidad disponible
-        if errores:
-            raise forms.ValidationError(errores)
-
-        # -----------------------------
-        # 3. VALIDACIÓN DE PLANIFICACIÓN / DISPONIBLE
-        # -----------------------------
-        from django.db.models import Sum
-
-        total_asignado = (
-            AportacionEmpleado.objects
-            .filter(id_orden_detalle=detalle)
-            .exclude(id=self.instance.id)
-            .aggregate(total=Sum("cant_aprobada"))["total"] or 0
-        )
-        planificada = detalle.cantidad_planificada or 0
-        disponible = planificada - total_asignado
-
-        if cantidad_solicitada > disponible:
-            errores.append(
-                f"No es posible asignar {cantidad_solicitada} unidades porque solo quedan {disponible} disponibles."
-            )
-            errores.append(
-                f"Unidades planificadas: {planificada}, unidades ya asignadas: {total_asignado}"
-            )
-
-            # Detalle por empleado
-            asignaciones = (
-                AportacionEmpleado.objects
-                .filter(id_orden_detalle=detalle)
-                .exclude(id=self.instance.id)
-                .values("id_empleado__user__username", "cant_aprobada")
-            )
-
-            if asignaciones.exists():
-                for a in asignaciones:
-                    nombre = a["id_empleado__user__username"]
-                    cant = a["cant_aprobada"]
-                    errores.append(f"Asignaciones actuales: {nombre}: {cant} unidades")
-            else:
-                errores.append("Nadie ha tomado unidades aún.")
-
-        # Lanzar errores finales
-        if errores:
-            raise forms.ValidationError(errores)
+            if errores:
+                raise forms.ValidationError(errores)
 
         # -----------------------------
         # 4. ASIGNAR CANTIDAD APROBADA
@@ -291,6 +291,24 @@ class AportacionAdmin(admin.ModelAdmin):
 
         # Guardamos normalmente
         super().save_model(request, obj, form, change)
+          # -----------------------------------
+        if obj.id_orden_detalle:
+            total_finalizada = (
+                AportacionEmpleado.objects
+                .filter(id_orden_detalle=obj.id_orden_detalle)
+                .aggregate(total=Sum("cantidad_finalizada"))["total"] or 0
+            )
+            detalle = obj.id_orden_detalle
+            detalle.cantidad_producida = total_finalizada
+            planificada = detalle.cantidad_planificada or 0
+
+        if total_finalizada == 0:
+            detalle.estado = OrdenMensualDetalle.PEND
+        elif total_finalizada < planificada:
+            detalle.estado = OrdenMensualDetalle.INCOMP
+        else:  # total_finalizada >= planificada
+            detalle.estado = OrdenMensualDetalle.COMP
+        detalle.save()
 
 
     def get_urls(self):
