@@ -15,6 +15,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 from Notificaciones.utils.notificacio_reutilizable import crear_notificacion
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse, JsonResponse
+from Empleados.models import PerfilUsuario
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
         fields = "__all__"
@@ -193,6 +196,7 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     search_fields = ('cliente',)
     readonly_fields=("fecha_registro","fecha_vencimiento")
     list_filter = ('activo',)
+    change_form_template = "admin/cotizacion_change_form.html"
     inlines = [DetalleCotizacionesInline]
 
     
@@ -238,8 +242,360 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
         urls = super().get_urls()
         custom = [
             path("obtener_precio_mueble/<int:mueble_id>/", self.obtener_precio_mueble),
+            path(
+                "<int:cotizacion_id>/imprimir-cotizacion/",
+                self.admin_site.admin_view(self.imprimir_cotizacion),
+                name="imprimir_cotizacion"
+            ),
         ]
         return custom + urls
+    
+    def imprimir_cotizacion(self, request, cotizacion_id):
+        # imports locales
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.units import inch
+        from reportlab.pdfgen import canvas
+        from django.shortcuts import get_object_or_404
+        from django.http import HttpResponse
+
+        # ----------------------------
+        # OBTENCIÓN DE DATOS
+        # ----------------------------
+        cotizacion = get_object_or_404(
+            Cotizacione.objects.select_related("cliente"),
+            id=cotizacion_id
+        )
+
+        detalles = DetalleCotizaciones.objects.filter(id_cotizacion=cotizacion).select_related("id_mueble")
+
+        perfil = PerfilUsuario.objects.filter(user=request.user).first()
+        sucursal = None
+        if perfil and hasattr(perfil, "sucursal"):
+            sucursal = perfil.sucursal
+
+        sucursal_info = ""
+        if sucursal:
+            sucursal_info = (
+                f"R.T.N. No {sucursal.rtn}<br/>"
+                f"{sucursal.nombre}<br/>"
+                f"{sucursal.direccion}<br/>"
+                f"Tel. (504) {sucursal.telefono or 'No registrado'}"
+            )
+        else:
+            sucursal_info = "Sucursal no registrada"
+
+        # ----------------------------
+        # PDF RESPONSE
+        # ----------------------------
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="Cotizacion_{cotizacion.id}.pdf"'
+
+        doc = SimpleDocTemplate(
+            response,
+            pagesize=A4,
+            topMargin=0.5 * inch,
+            bottomMargin=0.5 * inch,
+            rightMargin=0.5 * inch,
+            leftMargin=0.5 * inch,
+        )
+
+        styles = getSampleStyleSheet()
+
+        # Estilos profesionales en B/N (mismo estilo que factura)
+        title_style = ParagraphStyle(
+            'title_style',
+            parent=styles['Heading1'],
+            alignment=1,
+            fontSize=20,
+            textColor=colors.black,
+            spaceAfter=4,
+            fontName='Helvetica-Bold',
+            letterSpacing=2
+        )
+
+        company_style = ParagraphStyle(
+            'company_style',
+            parent=styles['Normal'],
+            alignment=1,
+            fontSize=14,
+            textColor=colors.black,
+            spaceAfter=2,
+            fontName='Helvetica-Bold'
+        )
+
+        info_style = ParagraphStyle(
+            'info_style',
+            parent=styles['Normal'],
+            alignment=1,
+            fontSize=9,
+            textColor=colors.black,
+            leading=11
+        )
+
+        label_style = ParagraphStyle(
+            'label_style',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
+        )
+
+        data_style = ParagraphStyle(
+            'data_style',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.black
+        )
+
+        small_style = ParagraphStyle(
+            'small_style',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.black,
+            leading=10
+        )
+
+        story = []
+
+        # -----------------------------------------------------------
+        # ENCABEZADO PROFESIONAL
+        # -----------------------------------------------------------
+        story.append(Paragraph("COTIZACIÓN", title_style))
+        story.append(Spacer(1, 0.05 * inch))
+        story.append(Paragraph("Mueblería San José", company_style))
+        story.append(Spacer(1, 0.1 * inch))
+        story.append(Paragraph(sucursal_info, info_style))
+        
+        story.append(Spacer(1, 0.15 * inch))
+        
+        # Línea separadora
+        linea = Table([[""]], colWidths=[7.5 * inch])
+        linea.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 2, colors.black),
+        ]))
+        story.append(linea)
+        story.append(Spacer(1, 0.15 * inch))
+
+        # -----------------------------------------------------------
+        # NÚMERO DE COTIZACIÓN DESTACADO
+        # -----------------------------------------------------------
+        tabla_num = Table(
+            [[Paragraph("<b>COTIZACIÓN No.</b>", label_style), 
+            Paragraph(f"<b>{cotizacion.id}</b>", label_style)]],
+            colWidths=[1.5 * inch, 6 * inch]
+        )
+        tabla_num.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 2, colors.black),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('PADDING', (0, 0), (-1, -1), 8),
+            ('FONTSIZE', (0, 0), (-1, -1), 11)
+        ]))
+        story.append(tabla_num)
+        story.append(Spacer(1, 0.2 * inch))
+
+        # -----------------------------------------------------------
+        # INFORMACIÓN DE FECHAS
+        # -----------------------------------------------------------
+        info_dates = [
+            [Paragraph("<b>Fecha de Cotización:</b>", label_style), 
+            Paragraph(cotizacion.fecha_registro.strftime("%d/%m/%Y %H:%M"), data_style)],
+            [Paragraph("<b>Fecha de Vencimiento:</b>", label_style), 
+            Paragraph(cotizacion.fecha_vencimiento.strftime("%d/%m/%Y") if cotizacion.fecha_vencimiento else "No aplica", data_style)],
+        ]
+
+        tabla_dates = Table(info_dates, colWidths=[2 * inch, 5.5 * inch])
+        tabla_dates.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.9, 0.9, 0.9)),
+            ('PADDING', (0, 0), (-1, -1), 6),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(tabla_dates)
+        story.append(Spacer(1, 0.25 * inch))
+
+        # -----------------------------------------------------------
+        # INFORMACIÓN DEL CLIENTE
+        # -----------------------------------------------------------
+        cliente = cotizacion.cliente
+        
+        datos_cliente = [
+            [Paragraph("<b>DATOS DEL CLIENTE</b>", label_style), ""],
+            [Paragraph("<b>Nombre:</b>", label_style), 
+            Paragraph(cliente.nombre if cliente else "No registrado", data_style)],
+            [Paragraph("<b>RTN:</b>", label_style), 
+            Paragraph(cliente.rtn or "No registrado", data_style)],
+            [Paragraph("<b>Teléfono:</b>", label_style), 
+            Paragraph(cliente.telefono or "No registrado", data_style)],
+            [Paragraph("<b>Dirección:</b>", label_style), 
+            Paragraph(cliente.direccion or "No registrada", data_style)],
+        ]
+
+        tabla_cliente = Table(datos_cliente, colWidths=[1.3 * inch, 6.2 * inch])
+        tabla_cliente.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('INNERGRID', (0, 1), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('SPAN', (0, 0), (1, 0)),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('PADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+
+        story.append(tabla_cliente)
+        story.append(Spacer(1, 0.25 * inch))
+
+        # -----------------------------------------------------------
+        # TABLA DE PRODUCTOS
+        # -----------------------------------------------------------
+        filas = [
+            [Paragraph("<b>Cant.</b>", label_style),
+            Paragraph("<b>Descripción</b>", label_style),
+            Paragraph("<b>Precio Unit.</b>", label_style),
+            Paragraph("<b>Subtotal</b>", label_style)]
+        ]
+
+        for det in detalles:
+            try:
+                subtotal = float(det.subtotal)
+            except Exception:
+                subtotal = (det.cantidad or 0) * (det.precio_unitario or 0)
+
+            filas.append([
+                Paragraph(str(det.cantidad), data_style),
+                Paragraph(f"{det.id_mueble.nombre if det.id_mueble else 'Sin descripción'}", data_style),
+                Paragraph(f"L. {float(det.precio_unitario or 0):,.2f}", data_style),
+                Paragraph(f"L. {subtotal:,.2f}", data_style)
+            ])
+
+        tabla_prod = Table(
+            filas, colWidths=[0.8 * inch, 3.5 * inch, 1.6 * inch, 1.6 * inch]
+        )
+        tabla_prod.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+            ('BOX', (0, 0), (-1, -1), 1.5, colors.black),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('PADDING', (0, 0), (-1, -1), 6),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
+        ]))
+
+        story.append(tabla_prod)
+        story.append(Spacer(1, 0.25 * inch))
+
+        # -----------------------------------------------------------
+        # TOTALES
+        # -----------------------------------------------------------
+        totales = [
+            [Paragraph("<b>Subtotal:</b>", label_style), 
+            Paragraph(f"L. {(cotizacion.subtotal or 0):,.2f}", data_style)],
+            [Paragraph("<b>ISV 15%:</b>", label_style), 
+            Paragraph(f"L. {(cotizacion.isv or 0):,.2f}", data_style)],
+            [Paragraph("<b>TOTAL:</b>", label_style), 
+            Paragraph(f"<b>L. {(cotizacion.total or 0):,.2f}</b>", label_style)],
+        ]
+
+        tabla_tot = Table(totales, colWidths=[5.5 * inch, 2 * inch])
+        tabla_tot.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1.5, colors.black),
+            ('INNERGRID', (0, 0), (-1, -2), 0.5, colors.grey),
+            ('LINEABOVE', (0, -1), (-1, -1), 1.5, colors.black),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, -1), (-1, -1), 11)
+        ]))
+
+        story.append(tabla_tot)
+        story.append(Spacer(1, 0.3 * inch))
+
+        # -----------------------------------------------------------
+        # PIE DE PÁGINA
+        # -----------------------------------------------------------
+        story.append(Spacer(1, 0.1 * inch))
+        
+        pie_texto = """
+        <b>CONDICIONES GENERALES:</b><br/>
+        • Esta cotización es válida por el periodo indicado.<br/>
+        • Revisar mercancía antes de retirarla.<br/>
+        • Gracias por su preferencia.
+        """
+        
+        story.append(Paragraph(pie_texto, small_style))
+        
+        # Línea final
+        story.append(Spacer(1, 0.15 * inch))
+        linea_final = Table([[""]], colWidths=[7.5 * inch])
+        linea_final.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black),
+        ]))
+        story.append(linea_final)
+
+        # -----------------------------------------------------------
+        # NUMERACIÓN Y LOGO EN PIE
+        # -----------------------------------------------------------
+        class PageNumCanvas(canvas.Canvas):
+            def __init__(self, *args, **kwargs):
+                canvas.Canvas.__init__(self, *args, **kwargs)
+                self.pages = []
+
+            def showPage(self):
+                self.pages.append(dict(self.__dict__))
+                self._startPage()
+
+            def save(self):
+                page_count = len(self.pages)
+                for page in self.pages:
+                    self.__dict__.update(page)
+                    self.draw_page_number(page_count)
+                    canvas.Canvas.showPage(self)
+                canvas.Canvas.save(self)
+
+            def draw_page_number(self, page_count):
+                page = f"Página {self._pageNumber} de {page_count}"
+                self.setFont("Helvetica", 9)
+                self.drawRightString(7.8 * inch, 0.4 * inch, page)
+
+                # logo en esquina inferior izquierda
+                try:
+                    from reportlab.lib.utils import ImageReader
+                    logo_path = "static/img/logo.png"
+                    width = 90
+                    height = 90
+                    x = 0.5 * inch
+                    y = 0.2 * inch
+                    self.saveState()
+                    try:
+                        self.setFillAlpha(0.50)
+                        self.setStrokeAlpha(0.20)
+                    except Exception:
+                        pass
+                    self.drawImage(
+                        ImageReader(logo_path),
+                        x, y,
+                        width=width,
+                        height=height,
+                        preserveAspectRatio=True,
+                        mask="auto"
+                    )
+                    self.restoreState()
+                except Exception as e:
+                    print("Error cargando logo:", e)
+
+        # Construir documento con numeración
+        doc.build(story, canvasmaker=PageNumCanvas)
+        return response
+
+
+
 #------------------------------------------COMPRAS------------------------------------
 class RequerimientoForm(forms.ModelForm):
     class Meta:
