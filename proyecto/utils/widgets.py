@@ -315,75 +315,162 @@ class WidgetsRegulares:
             'style': 'width: 200px;',
             'inputmode': 'decimal',
             'placeholder': placeholder,
-
+            
             'oninput': f"""
-                let raw = this.value.replace(/[^0-9.]/g, '');
-
-                // Evitar más de un punto
-                let parts = raw.split('.');
+                // Guardar posición del cursor
+                let cursorPos = this.selectionStart;
+                let originalValue = this.value;
+                
+                // Remover todas las comas para procesar
+                let valueWithoutCommas = originalValue.replace(/,/g, '');
+                
+                // Permitir solo números y un punto
+                let cleanValue = valueWithoutCommas.replace(/[^0-9.]/g, '');
+                
+                // Manejar múltiples puntos - permitir solo uno
+                let parts = cleanValue.split('.');
                 if (parts.length > 2) {{
-                    raw = parts[0] + '.' + parts.slice(1).join('');
+                    cleanValue = parts[0] + '.' + parts.slice(1).join('');
                 }}
-
-                // Limitar parte entera antes del punto
-                let integer = raw.split('.')[0];
-                if (integer.length > {maxim}) {{
-                    integer = integer.substring(0, {maxim});
+                
+                // Limitar parte entera
+                let integerPart = parts[0] || '';
+                if (integerPart.length > {maxim}) {{
+                    integerPart = integerPart.substring(0, {maxim});
                 }}
-
-                // Reconstruir con decimales si existen
-                let decimal = raw.includes('.') ? raw.split('.')[1] : '';
-                raw = decimal ? integer + '.' + decimal : integer;
-
-                // Formatear entero con comas (solo visual)
-                let formatted_int = '';
-                for (let i = integer.length - 1, count = 0; i >= 0; i--) {{
-                    if (count > 0 && count % 3 === 0) {{
-                        formatted_int = ',' + formatted_int;
-                    }}
-                    formatted_int = integer[i] + formatted_int;
-                    count++;
+                
+                // Manejar parte decimal (máximo 2 dígitos)
+                let decimalPart = '';
+                if (parts.length > 1) {{
+                    decimalPart = parts[1].substring(0, 2); // Máximo 2 decimales
                 }}
-
-                // Armar formato final
-                let formatted = decimal ? formatted_int + '.' + decimal : formatted_int;
-
-                // Guardar valor RAW sin comas
-                this.setAttribute('data-raw-value', raw);
-                this.value = formatted;
-            """,
-
-            'onblur': """
-                const raw = this.getAttribute('data-raw-value');
-                if (raw !== null) {
-                    this.value = raw;
-                }
-            """,
-
-            'onfocus': """
-                const raw = this.value.replace(/[^0-9.]/g, '');
-                if (raw) {
-                    let parts = raw.split('.');
-                    let integer = parts[0];
-                    let decimal = parts[1] || '';
-
-                    let formatted_int = '';
-                    for (let i = integer.length - 1, count = 0; i >= 0; i--) {
-                        if (count > 0 && count % 3 === 0) {
-                            formatted_int = ',' + formatted_int;
-                        }
-                        formatted_int = integer[i] + formatted_int;
+                
+                // Reconstruir cleanValue
+                cleanValue = integerPart;
+                if (decimalPart) {{
+                    cleanValue += '.' + decimalPart;
+                }}
+                
+                // Formatear con comas (solo visual)
+                let formattedValue = '';
+                if (integerPart) {{
+                    // Formatear parte entera con comas
+                    let count = 0;
+                    for (let i = integerPart.length - 1; i >= 0; i--) {{
+                        if (count > 0 && count % 3 === 0) {{
+                            formattedValue = ',' + formattedValue;
+                        }}
+                        formattedValue = integerPart[i] + formattedValue;
                         count++;
-                    }
-
-                    let formatted = decimal ? formatted_int + '.' + decimal : formatted_int;
-                    this.setAttribute('data-raw-value', raw);
-                    this.value = formatted;
+                    }}
+                    
+                    // Agregar parte decimal si existe
+                    if (decimalPart) {{
+                        formattedValue += '.' + decimalPart;
+                    }}
+                }}
+                
+                // Guardar valor sin formato en atributo data
+                this.setAttribute('data-raw-value', cleanValue);
+                
+                // Actualizar el valor visual
+                this.value = formattedValue;
+                
+                // Ajustar posición del cursor después de agregar comas
+                if (formattedValue !== originalValue) {{
+                    // Contar comas añadidas antes de la posición original del cursor
+                    let commasAdded = 0;
+                    let valueBeforeCursor = originalValue.substring(0, cursorPos);
+                    let cleanBeforeCursor = valueBeforeCursor.replace(/,/g, '');
+                    let newFormattedBeforeCursor = formattedValue.substring(0, cursorPos + commasAdded);
+                    let newCleanBeforeCursor = newFormattedBeforeCursor.replace(/,/g, '');
+                    
+                    // Ajustar cursor basado en la diferencia
+                    while (newCleanBeforeCursor.length > cleanBeforeCursor.length) {{
+                        commasAdded++;
+                        newFormattedBeforeCursor = formattedValue.substring(0, cursorPos + commasAdded);
+                        newCleanBeforeCursor = newFormattedBeforeCursor.replace(/,/g, '');
+                    }}
+                    
+                    this.setSelectionRange(cursorPos + commasAdded, cursorPos + commasAdded);
+                }}
+            """,
+            
+            'onblur': """
+                // Al perder foco, mostrar sin formato (pero con punto decimal si existe)
+                const raw = this.getAttribute('data-raw-value');
+                if (raw !== null && raw !== '') {
+                    this.value = raw;
+                } else if (this.value) {
+                    // Si no hay raw value, limpiar comas
+                    this.value = this.value.replace(/,/g, '');
                 }
+            """,
+            
+            'onfocus': """
+                // Al hacer foco, formatear con comas
+                let currentValue = this.value;
+                if (currentValue) {
+                    // Remover comas existentes
+                    let cleanValue = currentValue.replace(/,/g, '');
+                    
+                    // Guardar valor limpio
+                    this.setAttribute('data-raw-value', cleanValue);
+                    
+                    // Formatear con comas
+                    let parts = cleanValue.split('.');
+                    let integerPart = parts[0] || '';
+                    let decimalPart = parts[1] || '';
+                    
+                    if (integerPart) {
+                        let formattedInt = '';
+                        for (let i = integerPart.length - 1, count = 0; i >= 0; i--) {
+                            if (count > 0 && count % 3 === 0) {
+                                formattedInt = ',' + formattedInt;
+                            }
+                            formattedInt = integerPart[i] + formattedInt;
+                            count++;
+                        }
+                        
+                        // Reconstruir valor formateado
+                        let formattedValue = formattedInt;
+                        if (decimalPart) {
+                            formattedValue += '.' + decimalPart;
+                        }
+                        
+                        this.value = formattedValue;
+                    }
+                }
+            """,
+            
+            'onkeydown': """
+                // Permitir navegación con teclas incluso cuando hay comas
+                const allowedKeys = [
+                    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+                    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                    'Home', 'End'
+                ];
+                
+                if (allowedKeys.includes(event.key)) {
+                    return true;
+                }
+                
+                // Permitir punto decimal
+                if (event.key === '.' && !this.value.includes('.')) {
+                    return true;
+                }
+                
+                // Permitir solo números
+                if (event.key.length === 1 && /[0-9]/.test(event.key)) {
+                    return true;
+                }
+                
+                event.preventDefault();
+                return false;
             """
         })
 
-    
+
 class WidgetsEspeciales:
     @staticmethod
     def nombreSucursal(placeholder="Ej: Mueblería San José - Germania"):

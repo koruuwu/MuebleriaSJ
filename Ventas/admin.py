@@ -247,6 +247,12 @@ class DetallesOrdenFormSet(BaseInlineFormSet):
 
     def clean(self):
         super().clean()
+        if self.instance and self.instance.pk:
+            raise ValidationError(
+                "No se pueden modificar los detalles de una orden ya creada. "
+                "Solo se permite agregar pagos (aportes)."
+            )
+        
         request = self.request
         perfil = PerfilUsuario.objects.filter(user=request.user).first()
         sucursal = getattr(perfil, "sucursal", None)
@@ -325,6 +331,11 @@ class DetallesOInline(admin.StackedInline):
         formset.request = request
         return formset
     
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # toda la edición es readonly
+            return [f.name for f in self.model._meta.fields]
+        return []
+    
     
 
     
@@ -337,6 +348,15 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
     form = OrdenForm
     inlines = [DetallesOInline]
     change_form_template = "admin/orden_venta_change_form.html"
+    def get_inline_instances(self, request, obj=None):
+        """
+        No devolver inlines si el objeto ya existe (edición).
+        Así no se renderizan inputs hidden del formset ni se validan/mandan en POST.
+        Mantiene los inlines disponibles solo en la creación (obj is None).
+        """
+        if obj:  # estamos en change view -> no queremos inlines
+            return []
+        return super().get_inline_instances(request, obj)
 
 
     def get_readonly_fields(self, request, obj=None):
@@ -442,42 +462,42 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
     # OrdenesVentasAdmin
     def save_related(self, request, form, formsets, change):
-        # primero dejar que Django guarde los inlines
-        super().save_related(request, form, formsets, change)
+        instance = form.instance
+        aporte = form.cleaned_data.get('aporte', 0) or 0
 
-        # solo aplicar la suma de aporte cuando se está EDITANDO
-        if not change:
-            # si es creación, saltamos toda la lógica de aporte/pago
-            return
+        if change:  # edición
+            with transaction.atomic():
+                if aporte:
+                    instance.pagado = (instance.pagado or 0) + aporte
 
-        # luego, en una transacción, aplicar el aporte y actualizar estado
-        from django.db import transaction
-        with transaction.atomic():
-            instance = form.instance  # la orden ya guardada por super()
-            aporte = form.cleaned_data.get('aporte', 0) or 0
+                    # Actualizar estado de pago
+                    estado_pagado = EstadoPagos.objects.filter(nombre__iexact="Pagado").first()
+                    estado_pendiente = EstadoPagos.objects.filter(nombre__iexact="Pendiente").first()
+                    
+                    if instance.total and instance.pagado:
+                        if estado_pagado and instance.pagado >= instance.total:
+                            instance.id_estado_pago = estado_pagado
+                        elif estado_pendiente:
+                            instance.id_estado_pago = estado_pendiente
 
-            # Solo sumar aporte si realmente hay aporte (y evitar duplicados)
-            if aporte:
-                instance.pagado = (instance.pagado or 0) + aporte
+                    instance.save(update_fields=['pagado', 'id_estado_pago'])
 
-            # recalcular estado de pago
-            try:
-                estado_pagado = EstadoPagos.objects.get(nombre__iexact="Pagado")
-                estado_pendiente = EstadoPagos.objects.get(nombre__iexact="Pendiente")
-            except EstadoPagos.DoesNotExist:
-                estado_pagado = estado_pendiente = None
+                # 🔴 No procesar los formsets nunca
+                return
 
-            if instance.total and instance.pagado:
-                if instance.pagado >= instance.total and estado_pagado:
-                    instance.id_estado_pago = estado_pagado
-                elif estado_pendiente:
-                    instance.id_estado_pago = estado_pendiente
+        # Si es nueva orden, guardar inlines y actualizar inventario
 
-            # guardar solo los campos que cambiaron
-            instance.save(update_fields=['pagado', 'id_estado_pago'])
-        
-        # después actualizar inventario u otras cosas que tengas en tu mixin
-        self.actualizar_inventario(instance, request)
+        if not change:  # creación
+            for formset in formsets:
+                formset.save()
+
+            self.actualizar_inventario(instance, request)
+
+
+
+    
+    # IMPORTANTE: NO llamar a actualizar_inventario aquí cuando es solo un aporte
+    # El inventario ya se consumió cuando se creó la orden
 
 
 
