@@ -25,7 +25,7 @@ class OrdenesVenta(models.Model):
     fecha_orden = models.DateTimeField(db_column='Fecha_Orden', auto_now_add=True )  # Field name made lowercase.
     fecha_entrega = models.DateField(db_column='Fecha_Entrega')  # Field name made lowercase
     efectivo = models.FloatField(blank=True, null=True)
-    num_tarjeta = models.CharField(blank=True, null=True)
+    num_tarjeta = models.CharField(blank=True, null=True, max_length=4)
 
     def __str__(self):
         if self.id_factura:

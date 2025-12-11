@@ -119,23 +119,40 @@ class OrdenForm(ModelForm):
         if error_rtn:
             errores.append(error_rtn)
 
-        # Validación efectivo mínimo
+        # Validación efectivo (mínimo por parámetro y que no exceda el total)
         total = cleaned_data.get("total") or 0
         efectivo = cleaned_data.get("efectivo")
         if efectivo not in (None, ""):
-            efectivo = float(efectivo)
+            # normalizar a float con manejo de errores
             try:
-                parametro_efectivo = Parametro.objects.get(id=4)
-                porcentaje_min = float(parametro_efectivo.valor)
-            except Parametro.DoesNotExist:
-                porcentaje_min = None
+                efectivo_float = float(efectivo)
+            except (ValueError, TypeError):
+                errores.append("El valor de efectivo no es válido.")
+                efectivo_float = None
 
-            if porcentaje_min is not None and total > 0:
-                minimo_requerido = total * (porcentaje_min / 100)
-                if efectivo < minimo_requerido:
+            # validación mínimo (si existe parámetro)
+            if efectivo_float is not None:
+                try:
+                    parametro_efectivo = Parametro.objects.get(id=4)
+                    porcentaje_min = float(parametro_efectivo.valor)
+                except Parametro.DoesNotExist:
+                    porcentaje_min = None
+                except (ValueError, TypeError):
+                    porcentaje_min = None
+
+                if porcentaje_min is not None and total > 0:
+                    minimo_requerido = total * (porcentaje_min / 100)
+                    if efectivo_float < minimo_requerido:
+                        errores.append(
+                            f"El efectivo ingresado ({efectivo_float}) es menor al mínimo requerido ({minimo_requerido:.2f}) según el porcentaje {porcentaje_min}%."
+                        )
+
+                # validación máximo: efectivo no puede ser mayor que el total
+                if total is not None and efectivo_float > float(total):
                     errores.append(
-                        f"El efectivo ingresado ({efectivo}) es menor al mínimo requerido ({minimo_requerido:.2f}) según el porcentaje {porcentaje_min}%."
+                        f"El efectivo ingresado ({efectivo_float}) no puede exceder el total ({float(total):.2f})."
                     )
+
 
         # Validación descuento máximo
         descuento = cleaned_data.get("descuento") or 0
