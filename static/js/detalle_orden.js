@@ -3,11 +3,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const isvInput = document.querySelector("#id_isv");
     const totalInput = document.querySelector("#id_total");
 
-
-    subtotalInput.readOnly = true;
-    isvInput.readOnly = true;
-    totalInput.readOnly = true;
-   
+    // Hacer campos de solo lectura
+    if (subtotalInput) subtotalInput.readOnly = true;
+    if (isvInput) isvInput.readOnly = true;
+    if (totalInput) totalInput.readOnly = true;
 
     function getAdminBaseUrl() {
         const parts = window.location.pathname.split("/");
@@ -37,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const descuentoPorcentaje = parseFloat(descuentoInput?.value) || 0;
 
-        // Nuevo: calcula el descuento como porcentaje
+        // Calcular el descuento como porcentaje
         const descuentoAplicado = subtotalGeneral * (descuentoPorcentaje / 100);
 
         const isv = subtotalGeneral * 0.15;
@@ -46,9 +45,12 @@ document.addEventListener("DOMContentLoaded", function () {
         if (subtotalInput) subtotalInput.value = subtotalGeneral.toFixed(2);
         if (isvInput) isvInput.value = isv.toFixed(2);
         if (totalInput) totalInput.value = total.toFixed(2);
-        totalInput.dispatchEvent(new Event('totalActualizado'));
+        
+        // Disparar evento para otros listeners
+        if (totalInput) {
+            totalInput.dispatchEvent(new Event('totalActualizado'));
+        }
     }   
-
 
     /* =====================================================
        ======= EVENTOS Y CÁLCULO DE CADA FILA DETALLE ======
@@ -63,13 +65,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const subtotalInput = fila.querySelector('input[id$="-subtotal"]');
 
         if (!muebleSelect || !precioInput || !cantidadInput || !subtotalInput) {
-            console.warn("Campos faltantes", { fila });
+            console.warn("Campos faltantes en fila", { fila });
             return;
         }
 
         function handleSelectChange() {
             const muebleId = muebleSelect.value;
-            if (!muebleId) return;
+            if (!muebleId) {
+                precioInput.value = "";
+                actualizarSubtotalFila();
+                return;
+            }
 
             fetch(`${adminBase}/obtener_precio_mueble/${muebleId}/`)
                 .then(r => {
@@ -97,9 +103,17 @@ document.addEventListener("DOMContentLoaded", function () {
             recalcularTotalesOrden();
         }
 
+        // Configurar eventos
         muebleSelect.addEventListener("change", handleSelectChange);
         cantidadInput.addEventListener("input", actualizarSubtotalFila);
         precioInput.addEventListener("input", actualizarSubtotalFila);
+
+        // Inicializar subtotal si hay valores
+        const cantidadVal = parseFloat(cantidadInput.value) || 0;
+        const precioVal = parseFloat(precioInput.value) || 0;
+        if (cantidadVal > 0 && precioVal > 0) {
+            subtotalInput.value = (cantidadVal * precioVal).toFixed(2);
+        }
 
         // Soporte para select2 si existe
         if (window.jQuery && window.jQuery.fn.select2) {
@@ -107,6 +121,27 @@ document.addEventListener("DOMContentLoaded", function () {
                 setTimeout(handleSelectChange, 10);
             });
         }
+    }
+
+    // Función para inicializar todos los cálculos
+    function inicializarCalculos() {
+        // Recalcular subtotales de cada fila existente
+        document.querySelectorAll('[id^="detallesordene_set-"]').forEach(row => {
+            const cantidadInput = row.querySelector('input[id$="-cantidad"]');
+            const precioInput = row.querySelector('input[id$="-precio_unitario"]');
+            const subtotalInput = row.querySelector('input[id$="-subtotal"]');
+            
+            if (cantidadInput && precioInput && subtotalInput) {
+                const cantidad = parseFloat(cantidadInput.value) || 0;
+                const precio = parseFloat(precioInput.value) || 0;
+                if (cantidad > 0 || precio > 0) {
+                    subtotalInput.value = (cantidad * precio).toFixed(2);
+                }
+            }
+        });
+        
+        // Recalcular totales generales
+        recalcularTotalesOrden();
     }
 
     // Conectar filas existentes
@@ -117,7 +152,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Conectar filas nuevas dinámicamente creadas
     document.body.addEventListener("formset:added", function (event) {
-        conectarEventosFila(event.target);
+        console.log("Formset añadido", event.target);
+        setTimeout(() => {
+            conectarEventosFila(event.target);
+            inicializarCalculos();
+        }, 50);
     });
 
     // Recalcular totales cuando cambie el descuento
@@ -125,4 +164,29 @@ document.addEventListener("DOMContentLoaded", function () {
     if (descuentoInput) {
         descuentoInput.addEventListener("input", recalcularTotalesOrden);
     }
+
+    /* =====================================================
+       ======== INICIALIZACIÓN AL CARGAR LA PÁGINA =========
+       ===================================================== */
+
+    // Ejecutar inicialización después de un breve delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        console.log("Inicializando cálculos...");
+        inicializarCalculos();
+        
+        // Conectar todas las filas nuevamente (por si hay valores precargados)
+        document.querySelectorAll('.form-row, .dynamic-detallesordene_set, .inline-related').forEach(fila => {
+            const hasFields = fila.querySelector('select[id$="-id_mueble"]') || 
+                             fila.querySelector('input[id$="-precio_unitario"]');
+            if (hasFields) {
+                conectarEventosFila(fila);
+            }
+        });
+    }, 300);
+
+    // También inicializar cuando la página termine de cargar completamente
+    window.addEventListener('load', function() {
+        console.log("Página cargada, recalculando...");
+        setTimeout(inicializarCalculos, 200);
+    });
 });
