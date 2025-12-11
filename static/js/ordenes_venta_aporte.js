@@ -42,6 +42,16 @@ document.addEventListener("DOMContentLoaded", function () {
     cuotasInput.addEventListener("change", function () {
         console.log("Evento change en cuotas → NUEVO VALOR:", cuotasInput.checked);
     });
+    function actualizarBasePagado() {
+        const total = limpiarNumero(totalInput.value || 0);
+        if (aporteInput.readOnly) {
+            pagadoInput.dataset.baseValue = total;
+        } else {
+            pagadoInput.dataset.baseValue = 0;
+        }
+        console.log("Nuevo baseValue:", pagadoInput.dataset.baseValue);
+    }
+
 
     function limpiarNumero(valor) {
         if (!valor) return 0;
@@ -117,6 +127,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 
 
         }
+        actualizarBasePagado()
 
         actualizarEstiloDeshabilitado();
 
@@ -138,6 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log("Cuotas activado  habilitando aporte");
             aporteInput.readOnly = false;
             pagadoInput.readOnly= true;
+            actualizarBasePagado()
             actualizarPagado();
         } else {
             console.log("Cuotas desactivado  deshabilitando aporte");
@@ -147,7 +159,9 @@ document.addEventListener("DOMContentLoaded", function () {
             actualizarPagado();
             console.log("total: "+totall)
         }
+        actualizarBasePagado()
         actualizarEstiloDeshabilitado();
+        
     }
 
     // Ejecutar inicial

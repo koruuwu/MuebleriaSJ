@@ -303,6 +303,87 @@ class WidgetsRegulares:
             """
         })
     
+    @staticmethod
+    def precio_decimal(maxim, allow_zero=False, placeholder="Ej: 199.99"):
+        """
+        Widget de precio que permite decimales con un solo punto.
+        Se formatea visualmente con comas, pero se envía RAW sin formato.
+        """
+        min_val = 0 if allow_zero else 1
+
+        return forms.TextInput(attrs={
+            'style': 'width: 200px;',
+            'inputmode': 'decimal',
+            'placeholder': placeholder,
+
+            'oninput': f"""
+                let raw = this.value.replace(/[^0-9.]/g, '');
+
+                // Evitar más de un punto
+                let parts = raw.split('.');
+                if (parts.length > 2) {{
+                    raw = parts[0] + '.' + parts.slice(1).join('');
+                }}
+
+                // Limitar parte entera antes del punto
+                let integer = raw.split('.')[0];
+                if (integer.length > {maxim}) {{
+                    integer = integer.substring(0, {maxim});
+                }}
+
+                // Reconstruir con decimales si existen
+                let decimal = raw.includes('.') ? raw.split('.')[1] : '';
+                raw = decimal ? integer + '.' + decimal : integer;
+
+                // Formatear entero con comas (solo visual)
+                let formatted_int = '';
+                for (let i = integer.length - 1, count = 0; i >= 0; i--) {{
+                    if (count > 0 && count % 3 === 0) {{
+                        formatted_int = ',' + formatted_int;
+                    }}
+                    formatted_int = integer[i] + formatted_int;
+                    count++;
+                }}
+
+                // Armar formato final
+                let formatted = decimal ? formatted_int + '.' + decimal : formatted_int;
+
+                // Guardar valor RAW sin comas
+                this.setAttribute('data-raw-value', raw);
+                this.value = formatted;
+            """,
+
+            'onblur': """
+                const raw = this.getAttribute('data-raw-value');
+                if (raw !== null) {
+                    this.value = raw;
+                }
+            """,
+
+            'onfocus': """
+                const raw = this.value.replace(/[^0-9.]/g, '');
+                if (raw) {
+                    let parts = raw.split('.');
+                    let integer = parts[0];
+                    let decimal = parts[1] || '';
+
+                    let formatted_int = '';
+                    for (let i = integer.length - 1, count = 0; i >= 0; i--) {
+                        if (count > 0 && count % 3 === 0) {
+                            formatted_int = ',' + formatted_int;
+                        }
+                        formatted_int = integer[i] + formatted_int;
+                        count++;
+                    }
+
+                    let formatted = decimal ? formatted_int + '.' + decimal : formatted_int;
+                    this.setAttribute('data-raw-value', raw);
+                    this.value = formatted;
+                }
+            """
+        })
+
+    
 class WidgetsEspeciales:
     @staticmethod
     def nombreSucursal(placeholder="Ej: Mueblería San José - Germania"):

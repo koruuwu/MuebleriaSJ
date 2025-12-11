@@ -100,14 +100,14 @@ def validar_rtn_cliente(usuariofinal, cliente):
 
 
 class OrdenForm(ValidacionesBaseForm):
-    aporte = forms.FloatField(initial=0, required=False, label="Aporte", widget=WidgetsRegulares.precio(10, False, "Ej: 20,000"))
+    aporte = forms.FloatField(initial=0, required=False, label="Aporte", widget=WidgetsRegulares.precio_decimal(10, False, "Ej: 20,000"))
 
     class Meta:
         model = OrdenesVenta
         fields = "__all__"
         widgets = {
             'descuento': WidgetsRegulares.numero(3, False, "Ej: 10"),
-            'efectivo': WidgetsRegulares.precio(10, False, "Ej: 20,000"),
+            'efectivo': WidgetsRegulares.precio_decimal(10, False, "Ej: 20,000"),
             'num_tarjeta': WidgetsRegulares.tarjeta(4, placeholder="Ej: 9876"),
         }
 
@@ -174,6 +174,21 @@ class OrdenForm(ValidacionesBaseForm):
         if aporte > float(restante):
             errores.append(f"El aporte ({aporte}) no puede exceder lo que resta por pagar ({restante}).")
 
+        metodo = cleaned_data.get("id_metodo_pago")   # Cambia este nombre si tu field se llama diferente
+        efectivo = cleaned_data.get("efectivo")
+        tarjeta = cleaned_data.get("num_tarjeta")
+
+        if metodo and getattr(metodo, "id", None) == 4:  # método MIXTO (4)
+            
+            # efectivo obligatorio
+            if efectivo in (None, "", 0):
+                errores.append("Debe ingresar el monto en efectivo porque el método de pago es mixto.")
+
+            # tarjeta obligatoria
+            if tarjeta in (None, ""):
+                errores.append("Debe ingresar los últimos 4 dígitos de la tarjeta porque el método de pago es mixto.")
+
+        # -------------------------------
 
         # Validación descuento máximo
         descuento = cleaned_data.get("descuento") or 0
@@ -185,6 +200,11 @@ class OrdenForm(ValidacionesBaseForm):
 
         if descuento_max is not None and float(descuento) > descuento_max:
             errores.append(f"El descuento máximo que se puede aplicar es del {descuento_max}%.")
+
+        estado_pagado = EstadoPagos.objects.filter(nombre__iexact="Pagado").first()
+        if self.instance.pk and self.instance.id_estado_pago == estado_pagado:
+            if cleaned_data.get("aporte"):
+                raise ValidationError("No puede modificar el aporte porque la orden ya está pagada.")
 
         # Validación CAI
         # Validación CAI solo si es nueva orden
@@ -201,21 +221,6 @@ class OrdenForm(ValidacionesBaseForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        aporte = self.cleaned_data.get('aporte', 0) or 0
-        if aporte:
-            instance.pagado = (instance.pagado or 0) + aporte
-
-        try:
-            estado_pagado = EstadoPagos.objects.get(nombre__iexact="Pagado")
-            estado_pendiente = EstadoPagos.objects.get(nombre__iexact="Pendiente")
-        except EstadoPagos.DoesNotExist:
-            estado_pagado = estado_pendiente = None
-
-        if instance.total and instance.pagado:
-            if instance.pagado >= instance.total and estado_pagado:
-                instance.id_estado_pago = estado_pagado
-            elif estado_pendiente:
-                instance.id_estado_pago = estado_pendiente
 
         if commit:
             instance.save()
@@ -335,21 +340,21 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
 
     def get_readonly_fields(self, request, obj=None):
-    # Si el objeto ya existe
         if obj:
             readonly = [field.name for field in obj._meta.fields]
 
-            # Adicional: si está completamente pagado, todos los campos son readonly
             estado_pagado = EstadoPagos.objects.filter(nombre__iexact="Pagado").first()
-            if estado_pagado and obj.id_estado_pago == estado_pagado:
-                return readonly
 
-            # Opcional: si no está pagado, se pueden dejar algunos campos editables
-            # Por ejemplo, permitir editar 'aporte' si aún falta por pagar
-            editable_fields = ['aporte']
+            # Si está pagado: bloquear todo + aporte
+            if estado_pagado and obj.id_estado_pago == estado_pagado:
+                return readonly + ['Aporte']
+
+            # Si NO está pagado: permitir editar solo aporte
+            editable_fields = ['Aporte']
             return [f for f in readonly if f not in editable_fields]
 
         return self.readonly_fields
+
     
 
     def _process_inline_errors(self, request, formsets):
@@ -435,9 +440,45 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
         return data
 
+    # OrdenesVentasAdmin
     def save_related(self, request, form, formsets, change):
+        # primero dejar que Django guarde los inlines
         super().save_related(request, form, formsets, change)
-        self.actualizar_inventario(form.instance, request)
+
+        # solo aplicar la suma de aporte cuando se está EDITANDO
+        if not change:
+            # si es creación, saltamos toda la lógica de aporte/pago
+            return
+
+        # luego, en una transacción, aplicar el aporte y actualizar estado
+        from django.db import transaction
+        with transaction.atomic():
+            instance = form.instance  # la orden ya guardada por super()
+            aporte = form.cleaned_data.get('aporte', 0) or 0
+
+            # Solo sumar aporte si realmente hay aporte (y evitar duplicados)
+            if aporte:
+                instance.pagado = (instance.pagado or 0) + aporte
+
+            # recalcular estado de pago
+            try:
+                estado_pagado = EstadoPagos.objects.get(nombre__iexact="Pagado")
+                estado_pendiente = EstadoPagos.objects.get(nombre__iexact="Pendiente")
+            except EstadoPagos.DoesNotExist:
+                estado_pagado = estado_pendiente = None
+
+            if instance.total and instance.pagado:
+                if instance.pagado >= instance.total and estado_pagado:
+                    instance.id_estado_pago = estado_pagado
+                elif estado_pendiente:
+                    instance.id_estado_pago = estado_pendiente
+
+            # guardar solo los campos que cambiaron
+            instance.save(update_fields=['pagado', 'id_estado_pago'])
+        
+        # después actualizar inventario u otras cosas que tengas en tu mixin
+        self.actualizar_inventario(instance, request)
+
 
 
 
@@ -1001,7 +1042,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
     readonly_fields = ('fecha_orden','id_factura','cai_usado',)
     fieldsets = [
         ("General", {"fields": ("id_factura", "id_cotizacion","id_empleado","id_cliente","rtn","descuento","subtotal","isv","total","fecha_entrega","fecha_orden")}),
-        ("Pago", {"fields": ("cuotas","aporte", "pagado","id_estado_pago","id_metodo_pago","efectivo","num_tarjeta")}),
+        ("Pago", {"fields": ("cuotas","id_metodo_pago","aporte", "pagado","efectivo","num_tarjeta","id_estado_pago")}),
     ]
 
     from reportlab.pdfgen.canvas import Canvas
