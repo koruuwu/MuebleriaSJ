@@ -160,6 +160,20 @@ class OrdenForm(ValidacionesBaseForm):
                         f"El efectivo ingresado ({efectivo_float}) no puede exceder el total ({float(total):.2f})."
                     )
 
+        aporte = cleaned_data.get("aporte") or 0
+        # total y pagado deben venir de la BD porque el admin los manda readonly
+        total = getattr(self.instance, "total", 0) or cleaned_data.get("total") or 0
+        pagado = getattr(self.instance, "pagado", 0) or 0
+
+        restante = total - pagado
+
+
+        if aporte > float(total):
+            errores.append(f"El aporte ({aporte}) no puede exceder el total ({total}).")
+
+        if aporte > float(restante):
+            errores.append(f"El aporte ({aporte}) no puede exceder lo que resta por pagar ({restante}).")
+
 
         # Validación descuento máximo
         descuento = cleaned_data.get("descuento") or 0
@@ -173,10 +187,12 @@ class OrdenForm(ValidacionesBaseForm):
             errores.append(f"El descuento máximo que se puede aplicar es del {descuento_max}%.")
 
         # Validación CAI
-        if perfil:
+        # Validación CAI solo si es nueva orden
+        if perfil and not self.instance.pk:  # solo si es creación
             cai = obtener_cai_valido(perfil.sucursal)
             if not cai:
                 errores.append("No hay CAI válido configurado para esta sucursal.")
+
 
         if errores:
             raise ValidationError(errores)
@@ -319,9 +335,20 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
 
 
     def get_readonly_fields(self, request, obj=None):
-        # Si el objeto ya existe (está guardado), hacer todos los campos readonly
-        if obj:  # obj existe cuando se está editando, no cuando se está creando
-            return [field.name for field in obj._meta.fields]
+    # Si el objeto ya existe
+        if obj:
+            readonly = [field.name for field in obj._meta.fields]
+
+            # Adicional: si está completamente pagado, todos los campos son readonly
+            estado_pagado = EstadoPagos.objects.filter(nombre__iexact="Pagado").first()
+            if estado_pagado and obj.id_estado_pago == estado_pagado:
+                return readonly
+
+            # Opcional: si no está pagado, se pueden dejar algunos campos editables
+            # Por ejemplo, permitir editar 'aporte' si aún falta por pagar
+            editable_fields = ['aporte']
+            return [f for f in readonly if f not in editable_fields]
+
         return self.readonly_fields
     
 

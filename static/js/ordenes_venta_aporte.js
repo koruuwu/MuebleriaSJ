@@ -138,6 +138,7 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log("Cuotas activado  habilitando aporte");
             aporteInput.readOnly = false;
             pagadoInput.readOnly= true;
+            actualizarPagado();
         } else {
             console.log("Cuotas desactivado  deshabilitando aporte");
             pagadoInput.value= totall;
