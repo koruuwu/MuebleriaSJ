@@ -76,8 +76,16 @@ JAZZMIN_SETTINGS = {
         "Sucursales.Sucursale":"fa-solid fa-store",
         "Ventas.OrdenesVenta":"fa-solid fa-dollar-sign",
         "Empleados.Empleado":"fa-solid fa-user-tie",
+        "Notificaciones.Notificacione":"fa-solid fa-bell",
+        "Compras.Cotizacione": "fa-solid fa-newspaper",
+        "Compras.InventarioMateriale": "fa-solid fa-box-archive",
+        "Compras.InventarioMueble": "fa-solid fa-box-archive",
+        "Compras.ListaCompra":"fa-solid fa-rectangle-list",
+        "Trabajo.OrdenMensuale":"fa-solid fa-calendar-day",
+        "Trabajo.AportacionEmpleado":"fa-solid fa-briefcase",
+        "Parametros.Parametro":"fa-solid fa-file-invoice-dollar"
         
-    },
+    }
     
 
 }
