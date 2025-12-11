@@ -210,6 +210,9 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
         super().save_model(request, obj, form, change)
         # Actualizar estado de la orden principal
         obj.id_orden.actualizar_estado()
+
+
+    
   
     inlines = [AportacionMInline]
     
@@ -217,6 +220,12 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
 @admin.register(OrdenMensuale)
 class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
     inlines = [DetalleOrdenMInline]
+    def get_readonly_fields(self, request, obj=None):
+        readonly = super().get_readonly_fields(request, obj)
+        if obj and obj.estado == OrdenMensuale.COMP:
+            # Toda la orden es de solo lectura
+            return [f.name for f in self.model._meta.fields]
+        return readonly
     
 
 
