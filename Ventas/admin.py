@@ -15,6 +15,8 @@ from django.utils import timezone
 from django.utils import timezone
 from Sucursales.models import Cai
 from Compras.models import InventarioMueble
+from proyecto.utils.validators import ValidacionesBaseForm
+from proyecto.utils.widgets import WidgetsRegulares
 
 def obtener_cai_valido(sucursal):
     hoy = timezone.now().date()
@@ -97,12 +99,15 @@ def validar_rtn_cliente(usuariofinal, cliente):
     return None
 
 
-class OrdenForm(ModelForm):
+class OrdenForm(ValidacionesBaseForm):
     aporte = forms.FloatField(initial=0, required=False, label="Aporte")
 
     class Meta:
         model = OrdenesVenta
         fields = "__all__"
+        widgets = {
+            'descuento': WidgetsRegulares.numero(3, False, "Ej: 10"),
+        }
 
     def clean(self):
         cleaned_data = super().clean()
