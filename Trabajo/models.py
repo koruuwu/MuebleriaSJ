@@ -23,13 +23,29 @@ class OrdenMensuale(models.Model):
     nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
     fecha_creacion = models.DateTimeField(db_column='Fecha_creacion')  # Field name made lowercase.
     fecha_fin = models.DateField(db_column='Fecha_fin', blank=True, null=True)  # Field name made lowercase.
-    estado = models.CharField(blank=False, null=True, choices=EI_CHOICES, default=1) 
+    estado = models.CharField(blank=False, null=True, choices=EI_CHOICES, default=PEND) 
     observaciones = models.CharField(blank=True, null=True)
 
     def __str__(self):
         if self.nombre:
             return self.nombre
         return f"Orden #{self.id} (Sin nombre)"
+    
+    def actualizar_estado(self):
+        detalles = self.ordenmensualdetalle_set.all()
+        if not detalles.exists():
+            self.estado = self.PEND
+        else:
+            total_detalles = detalles.count()
+            completos = detalles.filter(estado=OrdenMensualDetalle.COMP).count()
+
+            if completos == 0:
+                self.estado = self.PEND
+            elif completos < total_detalles:
+                self.estado = self.INCOMP
+            else:
+                self.estado = self.COMP
+        super().save(update_fields=['estado'])
 
     class Meta:
         managed = False

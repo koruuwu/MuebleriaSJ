@@ -206,6 +206,10 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
     model = OrdenMensualDetalle
     extra = 0
     min_num = 0  # Cambia a 1 para forzar al menos un detalle
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # Actualizar estado de la orden principal
+        obj.id_orden.actualizar_estado()
   
     inlines = [AportacionMInline]
     
@@ -213,6 +217,7 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
 @admin.register(OrdenMensuale)
 class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
     inlines = [DetalleOrdenMInline]
+    
 
 
 @admin.register(AportacionEmpleado)
@@ -376,6 +381,12 @@ class AportacionAdmin(admin.ModelAdmin):
         else:  # total_finalizada >= planificada
             detalle.estado = OrdenMensualDetalle.COMP
         detalle.save()
+
+        if detalle:
+            orden = detalle.id_orden
+            orden.actualizar_estado()
+
+    
 
 
     def get_urls(self):
