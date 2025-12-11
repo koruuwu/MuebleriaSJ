@@ -106,7 +106,7 @@ class InventarioMForm(ValidacionesBaseForm):
 @admin.register(InventarioMateriale)
 class InventarioMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     form = InventarioMForm
-    list_display = ("id_material", "cantidad_disponible", "estado", "ubicación", "stock_minimo_info")
+    list_display = ("id_material", "cantidad_disponible","cantidad_reservada", "estado", "ubicación", "stock_minimo_info")
     search_fields = ('id_material__nombre', 'ubicación__nombre')
     readonly_fields = ('ultima_entrada', 'ultima_salida')
     list_filter = ('estado', 'ubicación')

@@ -227,6 +227,54 @@ class AportacionAdmin(admin.ModelAdmin):
 
     
     def save_model(self, request, obj, form, change):
+
+        super().save_model(request, obj, form, change)
+
+        detalle = None
+        if obj.id_orden_detalle:
+            detalle = obj.id_orden_detalle
+
+        # ===============================
+        #   1. RESERVAR MATERIALES (primer guardado)
+        # ===============================
+        es_aprobacion = (not change) or (change and obj.materiales_reservados == {})
+
+        if es_aprobacion and obj.cant_aprobada:
+            mueble = detalle.id_mueble
+            sucursal = detalle.id_orden.id_sucursal
+
+            materiales_mueble = MuebleMateriale.objects.filter(id_mueble=mueble)
+
+            reservas = {}
+
+            for mm in materiales_mueble:
+                material = mm.id_material
+                cantidad_por_mueble = mm.cantidad
+                total_necesario = cantidad_por_mueble * obj.cant_aprobada
+
+                invent = InventarioMateriale.objects.filter(
+                    id_material=material,
+                    ubicación=sucursal
+                ).first()
+
+                if invent:
+
+                    # Descontar disponible
+                    invent.cantidad_disponible = (invent.cantidad_disponible or 0) - total_necesario
+                    
+                    # Aumentar reservada
+                    invent.cantidad_reservada = (invent.cantidad_reservada or 0) + total_necesario
+
+                    invent.save()
+
+                    reservas[str(material.id)] = total_necesario
+
+            # Guardar registro de lo reservado
+            obj.materiales_reservados = reservas
+            obj.save()
+
+        
+
         """
         - Usa el campo fantasma 'Aporte'
         - Controla que no supere lo aprobado
@@ -288,6 +336,25 @@ class AportacionAdmin(admin.ModelAdmin):
                 request,
                 f"Aportación marcada como 'Trabajando' porque hay {nueva_finalizada} unidades finalizadas."
             )
+
+        if obj.estado == AportacionEmpleado.COMP and obj.materiales_reservados:
+
+            sucursal = obj.id_orden_detalle.id_orden.id_sucursal
+
+            for mat_id, cant_reservada in obj.materiales_reservados.items():
+                invent = InventarioMateriale.objects.filter(
+                    id_material_id=mat_id,
+                    ubicación=sucursal
+                ).first()
+
+                if invent:
+                    invent.cantidad_reservada = (invent.cantidad_reservada or 0) - cant_reservada
+                    if invent.cantidad_reservada < 0:
+                        invent.cantidad_reservada = 0
+                    invent.save()
+
+            # limpiar registro
+            obj.materiales_reservados = {}
 
         # Guardamos normalmente
         super().save_model(request, obj, form, change)

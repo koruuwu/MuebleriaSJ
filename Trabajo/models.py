@@ -84,6 +84,7 @@ class AportacionEmpleado(models.Model):
     cant_aprobada = models.BigIntegerField(blank=True, null=True)
     cantidad_finalizada = models.BigIntegerField(blank=True, null=True)
     estado = models.CharField(blank=False, null=False, choices=EA_CHOICES, default=PEND)
+    materiales_reservados = models.JSONField(default=dict, blank=True)
 
     class Meta:
         managed = False

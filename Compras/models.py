@@ -295,6 +295,7 @@ class InventarioMateriale(models.Model):
     ubicación = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='ubicación', blank=True, null=True)
     ultima_entrada = models.DateField(db_column='ultima entrada', blank=True, null=True)  # Field renamed to remove unsuitable characters.
     ultima_salida = models.DateField(db_column='ultima salida', blank=True, null=True)  # Field renamed to remove unsuitable characters.
+    cantidad_reservada = models.BigIntegerField(db_column='Cantidad_Reservada', blank=True, null=True)  # Field name made lowercase.
     
 
     class Meta:
