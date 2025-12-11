@@ -100,13 +100,15 @@ def validar_rtn_cliente(usuariofinal, cliente):
 
 
 class OrdenForm(ValidacionesBaseForm):
-    aporte = forms.FloatField(initial=0, required=False, label="Aporte")
+    aporte = forms.FloatField(initial=0, required=False, label="Aporte", widget=WidgetsRegulares.precio(10, False, "Ej: 20,000"))
 
     class Meta:
         model = OrdenesVenta
         fields = "__all__"
         widgets = {
             'descuento': WidgetsRegulares.numero(3, False, "Ej: 10"),
+            'efectivo': WidgetsRegulares.precio(10, False, "Ej: 20,000"),
+            'num_tarjeta': WidgetsRegulares.tarjeta(4, placeholder="Ej: 9876"),
         }
 
     def clean(self):

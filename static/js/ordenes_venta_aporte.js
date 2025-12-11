@@ -43,6 +43,11 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("Evento change en cuotas → NUEVO VALOR:", cuotasInput.checked);
     });
 
+    function limpiarNumero(valor) {
+        if (!valor) return 0;
+        return parseFloat(valor.replace(/,/g, '')) || 0;
+    }
+
    
 
     function actualizarEstiloDeshabilitado() {
@@ -76,6 +81,8 @@ document.addEventListener("DOMContentLoaded", function () {
     function actualizarCamposPorMetodoPago() {
         const valor = parseInt(metodoPagoSelect.value);
         console.log("Metodo de pago seleccionado " + valor);
+        cuotasInput.disabled = false; // desbloquear por defecto
+        cuotasInput.checked = false;
 
 
         switch (valor) {
@@ -97,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
             case 4: // Mixto
                 cuotasInput.checked = false;
-                cuotasInput.readOnly = true;
+                cuotasInput.disabled = true;
                 tarjetaInput.readOnly = false;
                 efectivoInput.readOnly=false;
                 
@@ -151,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Guardar base original
     if (!pagadoInput.dataset.baseValue) {
-        pagadoInput.dataset.baseValue = parseFloat(pagadoInput.value || 0);
+        pagadoInput.dataset.baseValue = limpiarNumero(pagadoInput.value || 0);
         console.log("Base inicial pagado:", pagadoInput.dataset.baseValue);
     }
 
@@ -174,10 +181,16 @@ document.addEventListener("DOMContentLoaded", function () {
         let mensajeColor = "red";
         let mensajeTexto = `Pagado: L. ${pagado.toFixed(2)} (PENDIENTE)`;
 
-        if (!isNaN(total) && !isNaN(pagado) && pagado >= total && estadoPagadoId) {
+        if (!isNaN(total) && !isNaN(pagado) && pagado == total && estadoPagadoId) {
             nuevoValor = estadoPagadoId;
             mensajeColor = "green";
             mensajeTexto = `Pagado: L. ${pagado.toFixed(2)} (COMPLETO)`;
+        }
+
+        if (!isNaN(total) && !isNaN(pagado) && pagado > total && estadoPagadoId) {
+            nuevoValor = estadoPagadoId;
+            mensajeColor = "red";
+            mensajeTexto = `Pagado: L. ${pagado.toFixed(2)} (EXEDIDO)`;
         }
 
         // Actualizar select
@@ -207,9 +220,9 @@ document.addEventListener("DOMContentLoaded", function () {
     
 
     function actualizarPagado() {
-        const base = parseFloat(pagadoInput.dataset.baseValue || 0);
-        const aporte = parseFloat(aporteInput.value || 0);
-        const total = parseFloat(totalInput.value || 0);
+        const base = limpiarNumero(pagadoInput.dataset.baseValue || 0);
+        const aporte = limpiarNumero(aporteInput.value || 0);
+        const total = limpiarNumero(totalInput.value || 0);
 
         // Si aporte está deshabilitado, simplemente pagado = total
         if (aporteInput.readOnly) {
@@ -219,11 +232,11 @@ document.addEventListener("DOMContentLoaded", function () {
             pagadoInput.value = nuevoPagado.toFixed(2);
         }
 
-        actualizarEstadoPago(total, parseFloat(pagadoInput.value));
+        actualizarEstadoPago(total, limpiarNumero(pagadoInput.value));
 
         efectivoInput.addEventListener('input', function () {
-            const total = parseFloat(totalInput.value || 0);
-            const efectivo = parseFloat(efectivoInput.value || 0);
+            const total = limpiarNumero(totalInput.value || 0);
+            const efectivo = limpiarNumero(efectivoInput.value || 0);
 
             // Calcular lo que falta pagar con tarjeta
             const tarjetaFaltante = Math.max(total - efectivo, 0);
@@ -235,8 +248,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 mensaje_ta.style.color = "red"; // color opcional
                 mensaje_ta.textContent = `Para deposito completo se recomienda el metodo de pago efectivo`;  
             }else {
-                mensaje_ta.style.color = "green";
-                mensaje_ta.textContent = `Depósito en tarjeta: L. ${tarjetaFaltante.toFixed(2)}`;
+                if (total<efectivo) {
+                mensaje_ta.style.color = "red"; // color opcional
+                mensaje_ta.textContent = `Deposito EXEDIDO no puede superar al total`;  
+                    
+                } else {
+                    mensaje_ta.style.color = "green";
+                    mensaje_ta.textContent = `Depósito en tarjeta: L. ${tarjetaFaltante.toFixed(2)}`; 
+                }
+                
             }
 
             // También actualizar pagado total si quieres reflejarlo

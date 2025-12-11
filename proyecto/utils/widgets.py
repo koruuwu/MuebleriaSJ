@@ -198,6 +198,37 @@ class WidgetsRegulares:
                 }}
             """
         })
+    
+
+    @staticmethod
+    def tarjeta(maxim=4, min_len=4, placeholder="Ej: 0001"):
+        return forms.TextInput(attrs={
+            'style': 'width: 200px;',
+            'inputmode': 'numeric',  # Teclado numérico en móviles
+            'pattern': r'\d*',      # Solo números
+            'placeholder': placeholder,
+            'maxlength': maxim,
+
+            # Limitar solo a números y máximo de longitud
+            'oninput': f"""
+                this.value = this.value.replace(/[^0-9]/g,'');
+                if (this.value.length > {maxim}) {{
+                    this.value = this.value.slice(0, {maxim});
+                }}
+            """,
+
+            # Evitar escribir más de la longitud permitida
+            'onkeydown': f"""
+                if(
+                    this.value.length >= {maxim} &&
+                    event.key >= '0' && event.key <= '9' &&
+                    !event.ctrlKey && !event.metaKey
+                ) {{
+                    event.preventDefault();
+                }}
+            """
+        })
+
 
 
 

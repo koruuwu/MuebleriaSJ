@@ -187,6 +187,25 @@ class ValidacionesBaseForm(forms.ModelForm):
         return numero
 
 
+    def clean_num_tarjeta(self):
+        num = self.cleaned_data.get("num_tarjeta")
+
+        # Si está vacío, permitido porque es opcional
+        if not num:
+            return None
+
+        num = num.strip()
+
+        if not num.isdigit():
+            raise ValidationError("El número de tarjeta solo puede contener dígitos.")
+
+        if len(num) < 4:
+            raise ValidationError("El número de tarjeta debe tener al menos 4 dígitos.")
+
+        return num
+
+
+
     # ------------------- MÉTODOS ADICIONALES -------------------
     # otros métodos de validación comunes
     # como validar emails, números de documentos, etc.
