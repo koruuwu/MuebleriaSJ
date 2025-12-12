@@ -36,6 +36,20 @@ class Cai(models.Model):
         managed = False
         db_table = 'CAI'
 
+    def save(self, *args, **kwargs):
+
+        # --- Normalizar valores a 8 dígitos ---
+        if self.rango_inicial:
+            self.rango_inicial = str(self.rango_inicial).zfill(8)
+
+        if self.rango_final:
+            self.rango_final = str(self.rango_final).zfill(8)
+
+        if self.ultima_secuencia:
+            self.ultima_secuencia = str(self.ultima_secuencia).zfill(8)
+
+        super().save(*args, **kwargs)
+
 
 
 
