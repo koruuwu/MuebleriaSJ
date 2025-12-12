@@ -18,6 +18,7 @@ from Notificaciones.utils.notificacio_reutilizable import crear_notificacion
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from Empleados.models import PerfilUsuario
+
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
         fields = "__all__"

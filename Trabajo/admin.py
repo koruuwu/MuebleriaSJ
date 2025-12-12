@@ -9,6 +9,20 @@ from django.http import JsonResponse
 from Compras.models import  InventarioMateriale
 from Muebles.models import MuebleMateriale
 from django.db.models import Sum
+from Compras.models import InventarioMueble,Estados
+from django.utils import timezone
+
+def calcular_estado_automatico(cantidad, material):
+    stock_minimo = getattr(material, 'stock_minimo', 10)
+
+    if cantidad <= 0:
+        return Estados.objects.get(id=3)
+    elif cantidad < stock_minimo:
+        return Estados.objects.get(id=2)
+    else:
+        return Estados.objects.get(id=1)
+
+        
 class AportacionForm(ModelForm):
     orden_selector = forms.ModelChoiceField(
 
@@ -219,6 +233,7 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
 
 @admin.register(OrdenMensuale)
 class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
+    readonly_fields= ('fecha_creacion',)
     inlines = [DetalleOrdenMInline]
     def get_readonly_fields(self, request, obj=None):
         readonly = super().get_readonly_fields(request, obj)
@@ -369,6 +384,37 @@ class AportacionAdmin(admin.ModelAdmin):
 
             # limpiar registro
             obj.materiales_reservados = {}
+
+        
+        if aporte_usado > 0 and obj.id_orden_detalle:
+
+            mueble = obj.id_orden_detalle.id_mueble
+            sucursal = obj.id_orden_detalle.id_orden.id_sucursal
+
+            inventario = InventarioMueble.objects.filter(
+                id_mueble=mueble,
+                ubicación=sucursal
+            ).first()
+
+            if inventario:
+                inventario.cantidad_disponible = (inventario.cantidad_disponible or 0) + aporte_usado
+                inventario.ultima_entrada = timezone.now().date()
+
+                # Recalcular estado automáticamente
+                inventario.estado = calcular_estado_automatico(
+                    inventario.cantidad_disponible,
+                    mueble
+                )
+
+                inventario.save()
+            else:
+                # Si no existe inventario para ese mueble + sucursal, lo creamos
+                InventarioMueble.objects.create(
+                    id_mueble=mueble,
+                    ubicación=sucursal,
+                    cantidad_disponible=aporte_usado,
+                    ultima_entrada=timezone.now().date(),
+                )
 
         # Guardamos normalmente
         super().save_model(request, obj, form, change)

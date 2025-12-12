@@ -19,12 +19,12 @@ class OrdenMensuale(models.Model):
     
 
     id = models.BigAutoField(primary_key=True)
-    id_sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='id_sucursal', blank=True, null=True)
-    nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
-    fecha_creacion = models.DateTimeField(db_column='Fecha_creacion')  # Field name made lowercase.
-    fecha_fin = models.DateField(db_column='Fecha_fin', blank=True, null=True)  # Field name made lowercase.
-    estado = models.CharField(blank=False, null=True, choices=EI_CHOICES, default=PEND) 
+    id_sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='id_sucursal', blank=False, null=False)
+    nombre = models.CharField(db_column='Nombre', blank=False, null=False)  # Field name made lowercase.
+    fecha_creacion = models.DateTimeField(db_column='Fecha_creacion', auto_now_add=True )  # Field name made lowercase.
     observaciones = models.CharField(blank=True, null=True)
+    fecha_fin = models.DateField(db_column='Fecha_fin', blank=False, null=False)  # Field name made lowercase.
+    estado = models.CharField(blank=False, null=True, choices=EI_CHOICES, default=PEND) 
 
     def __str__(self):
         if self.nombre:
