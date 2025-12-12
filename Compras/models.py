@@ -151,17 +151,18 @@ class RequerimientoMateriale(models.Model):
     subtotal = models.FloatField(db_column='subtotal')
     id_lista = models.ForeignKey(ListaCompra, models.DO_NOTHING, db_column='ID_Lista')  # Field name made lowercase.
       # Field name made lowercase.
+    
     def save(self, *args, **kwargs):
         hoy = timezone.now().date()
-        try:
-            rel = MaterialProveedore.objects.get(
-                material=self.material,
-                id_proveedor=self.proveedor
-            )
-            precio_viejo = rel.precio_actual
-        except MaterialProveedore.DoesNotExist:
-            rel = None
-            precio_viejo = None
+
+        # Intentar obtener la relación material-proveedor
+        rel, created = MaterialProveedore.objects.get_or_create(
+            material=self.material,
+            id_proveedor=self.proveedor,
+            defaults={'precio_actual': self.precio_actual}
+        )
+
+        precio_viejo = rel.precio_actual if not created else None
 
         if precio_viejo != self.precio_actual:
             with transaction.atomic():
@@ -171,7 +172,7 @@ class RequerimientoMateriale(models.Model):
                     proveedor=self.proveedor,
                     fecha_fin__isnull=True
                 ).order_by('-fecha_inicio').first()
-                
+
                 if ultimo_historial:
                     ultimo_historial.fecha_fin = hoy
                     ultimo_historial.save()
@@ -185,10 +186,9 @@ class RequerimientoMateriale(models.Model):
                     proveedor=self.proveedor
                 )
 
-                # Actualizar precio en tabla principal
-                if rel:
-                    rel.precio_actual = self.precio_actual
-                    rel.save()
+                # Actualizar precio en MaterialProveedore
+                rel.precio_actual = self.precio_actual
+                rel.save()
 
         super().save(*args, **kwargs)
 
