@@ -11,6 +11,7 @@ from Muebles.models import MuebleMateriale
 from django.db.models import Sum
 from Compras.models import InventarioMueble,Estados
 from django.utils import timezone
+from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMixin
 
 def calcular_estado_automatico(cantidad, material):
     stock_minimo = getattr(material, 'stock_minimo', 10)
@@ -235,6 +236,9 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
 @admin.register(OrdenMensuale)
 class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
     readonly_fields= ('fecha_creacion',)
+    list_filter = ('estado','id_sucursal',)
+    list_display = ("id","estado","fecha_creacion","fecha_fin")
+    
     inlines = [DetalleOrdenMInline]
     def get_readonly_fields(self, request, obj=None):
         readonly = super().get_readonly_fields(request, obj)
@@ -246,10 +250,11 @@ class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
 
 
 @admin.register(AportacionEmpleado)
-class AportacionAdmin(admin.ModelAdmin):
+class AportacionAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     form = AportacionForm
     list_display = ("id","get_orden","id_empleado","estado","cant_aprobada","cantidad_finalizada")
     readonly_fields= ('estado',)
+    list_filter = ('estado',)
     # si tienes otros campos que quieres mostrar, agrégalos aquí
 
     class Media:
