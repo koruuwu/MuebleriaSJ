@@ -1,7 +1,8 @@
 from pickle import FALSE
 from django.db import models
 from Materiales.models import UnidadesMedida, Materiale
-
+from django.utils import timezone
+from django.db import transaction
 class CategoriasMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
     nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.
@@ -69,3 +70,51 @@ class MuebleMateriale(models.Model):
     class Meta:
         managed = False
         db_table = 'Mueble_Material'
+
+
+class HistorialPreciosMueble(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    precio = models.FloatField(db_column='Precio')  # Field name made lowercase.
+    fecha_inicio = models.DateField(db_column='Fecha_Inicio')  # Field name made lowercase.
+    fecha_fin = models.DateField(db_column='Fecha_Fin', blank=True, null=True)  # Field name made lowercase.
+    id_mueble = models.ForeignKey('Muebles', models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
+    
+    class Meta:
+        managed = False
+        db_table = 'Historial_Precios_muebles'
+
+    def save(self, *args, **kwargs):
+        hoy = timezone.now().date()
+
+        # Detectar si es edición
+        if self.pk:
+            mueble_anterior = Mueble.objects.filter(pk=self.pk).first()
+            precio_viejo = mueble_anterior.precio_base if mueble_anterior else None
+        else:
+            precio_viejo = None
+
+        # Guardar primero el registro principal
+        super().save(*args, **kwargs)
+
+        # Si el precio no cambió → no crear historial
+        if precio_viejo == self.precio_base:
+            return
+
+        with transaction.atomic():
+            # Cerrar historial anterior
+            ultimo = HistorialPreciosMueble.objects.filter(
+                id_mueble=self,
+                fecha_fin__isnull=True
+            ).order_by('-fecha_inicio').first()
+
+            if ultimo:
+                ultimo.fecha_fin = hoy
+                ultimo.save()
+
+            # Crear historial nuevo
+            HistorialPreciosMueble.objects.create(
+                precio=self.precio_base,
+                fecha_inicio=hoy,
+                fecha_fin=None,
+                id_mueble=self
+            )
