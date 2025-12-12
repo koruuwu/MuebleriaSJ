@@ -215,6 +215,7 @@ class AportacionForm(ModelForm):
 class AportacionMInline(nested_admin.NestedStackedInline):
     model = AportacionEmpleado
     extra = 0
+    exclude = ('materiales_reservados',)
 
 class DetalleOrdenMInline(nested_admin.NestedStackedInline):
     model = OrdenMensualDetalle
@@ -247,13 +248,18 @@ class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
 @admin.register(AportacionEmpleado)
 class AportacionAdmin(admin.ModelAdmin):
     form = AportacionForm
-    list_display = ("id","estado")
+    list_display = ("id","get_orden","id_empleado","estado","cant_aprobada","cantidad_finalizada")
     readonly_fields= ('estado',)
     # si tienes otros campos que quieres mostrar, agrégalos aquí
 
     class Media:
         js = ('js/filtros/filtro_orden_aportaciones.js','js/filtros/read_only_orden_aportaciones.js',)  # Archivo JS similar al de ListaCompra
 
+    def get_orden(self, obj):
+            if obj.id_orden_detalle:
+                return obj.id_orden_detalle.id_orden
+            return None
+    get_orden.short_description = "Orden"
     
     def save_model(self, request, obj, form, change):
 
