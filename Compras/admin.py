@@ -774,170 +774,322 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     
  
     def imprimir_lista_compra(self, request, lista_id):
-        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
         from reportlab.lib.units import inch
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
+        from django.http import HttpResponse
         from datetime import datetime
-        import os
         
         lista = self.get_object(request, lista_id)
-        requerimientos = RequerimientoMateriale.objects.filter(id_lista=lista).select_related('material','proveedor')
+        requerimientos = RequerimientoMateriale.objects.filter(id_lista=lista).select_related('material', 'proveedor')
         
+        # ----------------------------
+        # PDF RESPONSE
+        # ----------------------------
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="Lista_Compra_{lista.id}_{datetime.now().strftime("%Y%m%d")}.pdf"'
+        response['Content-Disposition'] = f'inline; filename="Lista_Compra_{lista.id}_{datetime.now().strftime("%Y%m%d")}.pdf"'
         
-        # Crear el documento
-        doc = SimpleDocTemplate(response, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+        doc = SimpleDocTemplate(
+            response,
+            pagesize=A4,
+            topMargin=0.5 * inch,
+            bottomMargin=0.5 * inch,
+            rightMargin=0.5 * inch,
+            leftMargin=0.5 * inch,
+        )
         
-        # Estilos
         styles = getSampleStyleSheet()
         
-        # Estilos personalizados
+        # Estilos profesionales en B/N (mismo estilo que factura)
         title_style = ParagraphStyle(
-            'CustomTitle',
+            'title_style',
             parent=styles['Heading1'],
-            fontSize=16,
-            textColor=colors.HexColor('#2c3e50'),
-            spaceAfter=12,
-            alignment=1  # Centrado
+            alignment=1,
+            fontSize=20,
+            textColor=colors.black,
+            spaceAfter=4,
+            fontName='Helvetica-Bold',
+            letterSpacing=2
         )
         
-        header_style = ParagraphStyle(
-            'CustomHeader',
+        company_style = ParagraphStyle(
+            'company_style',
             parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.white,
-            alignment=1
+            alignment=1,
+            fontSize=14,
+            textColor=colors.black,
+            spaceAfter=2,
+            fontName='Helvetica-Bold'
         )
         
-        normal_style = ParagraphStyle(
-            'CustomNormal',
+        info_style = ParagraphStyle(
+            'info_style',
+            parent=styles['Normal'],
+            alignment=1,
+            fontSize=9,
+            textColor=colors.black,
+            leading=11
+        )
+        
+        label_style = ParagraphStyle(
+            'label_style',
             parent=styles['Normal'],
             fontSize=9,
-            textColor=colors.HexColor('#2c3e50'),
-            alignment=0  # Izquierda
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         )
         
-        # Contenido
+        data_style = ParagraphStyle(
+            'data_style',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.black
+        )
+        
+        small_style = ParagraphStyle(
+            'small_style',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.black,
+            leading=10
+        )
+        
         story = []
         
-        # Encabezado
-        story.append(Paragraph("MUEBLERÍA SAN JOSÉ", title_style))
+        # -----------------------------------------------------------
+        # ENCABEZADO PROFESIONAL
+        # -----------------------------------------------------------
         story.append(Paragraph("LISTA DE COMPRA", title_style))
-        story.append(Spacer(1, 0.2*inch))
+        story.append(Spacer(1, 0.05 * inch))
+        story.append(Paragraph("Mueblería San José", company_style))
+        story.append(Spacer(1, 0.15 * inch))
         
-        # Información de la lista
+        # Línea separadora
+        linea = Table([[""]], colWidths=[7.5 * inch])
+        linea.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 2, colors.black),
+        ]))
+        story.append(linea)
+        story.append(Spacer(1, 0.15 * inch))
+        
+        # -----------------------------------------------------------
+        # NÚMERO DE LISTA DESTACADO
+        # -----------------------------------------------------------
+        tabla_num = Table(
+            [[Paragraph("<b>LISTA DE COMPRA No.</b>", label_style), 
+            Paragraph(f"<b>{lista.id}</b>", label_style)]],
+            colWidths=[2 * inch, 5.5 * inch]
+        )
+        tabla_num.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 2, colors.black),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('PADDING', (0, 0), (-1, -1), 8),
+            ('FONTSIZE', (0, 0), (-1, -1), 11)
+        ]))
+        story.append(tabla_num)
+        story.append(Spacer(1, 0.2 * inch))
+        
+        # -----------------------------------------------------------
+        # INFORMACIÓN DE LA LISTA
+        # -----------------------------------------------------------
         info_data = [
-            [Paragraph("<b>N° Lista:</b>", normal_style), Paragraph(str(lista.id), normal_style),
-            Paragraph("<b>Fecha Solicitud:</b>", normal_style), Paragraph(lista.fecha_solicitud.strftime("%d/%m/%Y"), normal_style)],
-            [Paragraph("<b>Fecha Entrega:</b>", normal_style), Paragraph(lista.fecha_entrega.strftime("%d/%m/%Y") if lista.fecha_entrega else "No especificada", normal_style),
-            Paragraph("<b>Prioridad:</b>", normal_style), Paragraph(lista.get_prioridad_display(), normal_style)],
-            [Paragraph("<b>Estado:</b>", normal_style), Paragraph(lista.get_estado_display(), normal_style),
-            Paragraph("<b>Generado:</b>", normal_style), Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)]
+            [Paragraph("<b>Fecha Solicitud:</b>", label_style), 
+            Paragraph(lista.fecha_solicitud.strftime("%d/%m/%Y"), data_style)],
+            [Paragraph("<b>Fecha Entrega:</b>", label_style), 
+            Paragraph(lista.fecha_entrega.strftime("%d/%m/%Y") if lista.fecha_entrega else "No especificada", data_style)],
+            [Paragraph("<b>Prioridad:</b>", label_style), 
+            Paragraph(lista.get_prioridad_display(), data_style)],
+            [Paragraph("<b>Estado:</b>", label_style), 
+            Paragraph(lista.get_estado_display(), data_style)],
+            [Paragraph("<b>Fecha de Generación:</b>", label_style), 
+            Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), data_style)],
         ]
         
-        info_table = Table(info_data, colWidths=[1.2*inch, 1.5*inch, 1.2*inch, 1.5*inch])
-        info_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#ecf0f1')),
-            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#bdc3c7')),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#bdc3c7')),
+        tabla_info = Table(info_data, colWidths=[2 * inch, 5.5 * inch])
+        tabla_info.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.9, 0.9, 0.9)),
+            ('PADDING', (0, 0), (-1, -1), 6),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
+        story.append(tabla_info)
+        story.append(Spacer(1, 0.25 * inch))
         
-        story.append(info_table)
-        story.append(Spacer(1, 0.3*inch))
-        
-        # Tabla de materiales
+        # -----------------------------------------------------------
+        # TABLA DE MATERIALES
+        # -----------------------------------------------------------
         if requerimientos:
-            # Encabezados de la tabla
-            headers = ['Material', 'Proveedor', 'Cantidad', 'Precio', 'Subtotal']
-            
-            # Datos de la tabla
-            table_data = [headers]
+            filas = [
+                [Paragraph("<b>Material</b>", label_style),
+                Paragraph("<b>Proveedor</b>", label_style),
+                Paragraph("<b>Cantidad</b>", label_style),
+                Paragraph("<b>Precio Unit.</b>", label_style),
+                Paragraph("<b>Subtotal</b>", label_style)]
+            ]
             
             for req in requerimientos:
                 subtotal = req.precio_actual * req.cantidad_necesaria
-                row = [
-                    Paragraph(req.material.nombre, normal_style),
-                    Paragraph(req.proveedor.compañia, normal_style),
-                    Paragraph(f"L. {req.cantidad_necesaria:,.2f}", normal_style),
-                    Paragraph(f"L. {req.precio_actual:,.2f}", normal_style),
-                    Paragraph(f"L. {subtotal:,.2f}", normal_style)
-                   
-                ]
-                table_data.append(row)
+                filas.append([
+                    Paragraph(req.material.nombre, data_style),
+                    Paragraph(req.proveedor.compañia, data_style),
+                    Paragraph(f"{req.cantidad_necesaria:,.2f}", data_style),
+                    Paragraph(f"L. {req.precio_actual:,.2f}", data_style),
+                    Paragraph(f"L. {subtotal:,.2f}", data_style)
+                ])
             
-
-            total_cantidad = sum(req.cantidad_necesaria for req in requerimientos)
-            total_general = sum(req.precio_actual * req.cantidad_necesaria for req in requerimientos)
-            
-            table_data.append([
-                Paragraph("<b>TOTAL GENERAL</b>", normal_style),
-                Paragraph("", normal_style),
-                Paragraph(f"<b>{total_cantidad}</b>", normal_style),
-                Paragraph("", normal_style),
-                Paragraph(f"<b>L. {total_general:,.2f}</b>", normal_style)
-            ])
-            
-            # Crear tabla
-            materiales_table = Table(table_data, colWidths=[2*inch, 2*inch, 1*inch, 1*inch,2*inch])
+            materiales_table = Table(
+                filas, colWidths=[2.2 * inch, 2 * inch, 1 * inch, 1.3 * inch, 1 * inch]
+            )
             materiales_table.setStyle(TableStyle([
-                # Estilo encabezados
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                
-                # Estilo filas
-                ('BACKGROUND', (0, 1), (-1, -2), colors.HexColor('#f8f9fa')),
-                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e9ecef')),
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#2c3e50')),
-                ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Centrar cantidad
-                ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Centrar unidad
-                
-                # Bordes
-                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#34495e')),
-                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
-                
-                # Estilo total
-                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4edda')),
-                
-                # Alineación y padding
+                ('ALIGN', (2, 1), (2, -1), 'CENTER'),
+                ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+                ('BOX', (0, 0), (-1, -1), 1.5, colors.black),
+                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('PADDING', (0, 0), (-1, -1), 6),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
             ]))
             
             story.append(materiales_table)
+            story.append(Spacer(1, 0.25 * inch))
+            
+            # -----------------------------------------------------------
+            # TOTALES
+            # -----------------------------------------------------------
+            total_cantidad = sum(req.cantidad_necesaria for req in requerimientos)
+            total_general = sum(req.precio_actual * req.cantidad_necesaria for req in requerimientos)
+            
+            totales = [
+                [Paragraph("<b>Total Cantidad:</b>", label_style), 
+                Paragraph(f"{total_cantidad:,.2f}", data_style)],
+                [Paragraph("<b>TOTAL GENERAL:</b>", label_style), 
+                Paragraph(f"<b>L. {total_general:,.2f}</b>", label_style)],
+            ]
+            
+            tabla_tot = Table(totales, colWidths=[5.5 * inch, 2 * inch])
+            tabla_tot.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 1.5, colors.black),
+                ('INNERGRID', (0, 0), (-1, -2), 0.5, colors.grey),
+                ('LINEABOVE', (0, -1), (-1, -1), 1.5, colors.black),
+                ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+                ('PADDING', (0, 0), (-1, -1), 6),
+                ('FONTSIZE', (0, -1), (-1, -1), 11)
+            ]))
+            
+            story.append(tabla_tot)
         else:
-            story.append(Paragraph("<b>No hay materiales en esta lista de compra</b>", normal_style))
+            story.append(Paragraph("<b>No hay materiales en esta lista de compra</b>", data_style))
         
-        story.append(Spacer(1, 0.5*inch))
+        story.append(Spacer(1, 0.3 * inch))
         
-        # Notas
-        notas = [
-            "• Verificar disponibilidad con proveedores antes de realizar pedidos",
-        ]
+        # -----------------------------------------------------------
+        # PIE DE PÁGINA
+        # -----------------------------------------------------------
+        story.append(Spacer(1, 0.1 * inch))
         
-        for nota in notas:
-            story.append(Paragraph(nota, ParagraphStyle(
-                'NotaStyle',
-                parent=styles['Normal'],
-                fontSize=8,
-                textColor=colors.HexColor('#7f8c8d'),
-                leftIndent=10
-            )))
+        pie_texto = """
+        <b>NOTAS IMPORTANTES:</b><br/>
+        • Verificar disponibilidad con proveedores antes de realizar pedidos.<br/>
+        • Confirmar precios actualizados al momento de la compra.<br/>
+        • Revisar calidad y especificaciones de los materiales.<br/>
+        • Conservar este documento como respaldo de la solicitud.
+        """
         
-        # Generar PDF
-        doc.build(story)
+        story.append(Paragraph(pie_texto, small_style))
+        
+        # Línea final
+        story.append(Spacer(1, 0.15 * inch))
+        linea_final = Table([[""]], colWidths=[7.5 * inch])
+        linea_final.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black),
+        ]))
+        story.append(linea_final)
+        class PageNumCanvas(canvas.Canvas):
+            def __init__(self, *args, **kwargs):
+                canvas.Canvas.__init__(self, *args, **kwargs)
+                self.pages = []
+                
+            def showPage(self):
+                self.pages.append(dict(self.__dict__))
+                self._startPage()
+                
+            def save(self):
+                page_count = len(self.pages)
+                
+                for page in self.pages:
+                    self.__dict__.update(page)
+                    self.draw_page_number(page_count)
+                    canvas.Canvas.showPage(self)
+                    
+                canvas.Canvas.save(self)
+            
+            def draw_page_number(self, page_count):
+                page = f"Página {self._pageNumber} de {page_count}"
+
+                # Número de página en esquina inferior derecha
+                self.setFont("Helvetica", 9)
+                self.drawRightString(
+                    7.8 * inch,
+                    0.4 * inch,
+                    page
+                )
+
+                # ---------------------------------------------
+                #   LOGO EN ESQUINA INFERIOR IZQUIERDA
+                # ---------------------------------------------
+                try:
+                    from reportlab.lib.utils import ImageReader
+
+                    logo_path = "static/img/logo.png"  # <--- CAMBIA ESTA RUTA
+
+                    # Tamaño pequeño (ajusta a gusto)
+                    width = 90
+                    height = 90
+
+                    # Posición (muy abajo, esquina izquierda)
+                    x = 0.5 * inch
+                    y = 0.2 * inch
+
+                    # Guardar estado gráfico
+                    self.saveState()
+
+                    # Opacidad (0.0 = invisible, 1.0 = normal)
+                    self.setFillAlpha(0.50)
+                    self.setStrokeAlpha(0.20)
+
+                    # Dibujar imagen
+                    self.drawImage(
+                        ImageReader(logo_path),
+                        x, y,
+                        width=width,
+                        height=height,
+                        preserveAspectRatio=True,
+                        mask='auto'
+                    )
+
+                    # Restaurar estado
+                    self.restoreState()
+
+                except Exception as e:
+                    print("Error cargando logo:", e)
+
+
+        # Construir PDF con numeración de páginas
+        doc.build(
+            story,
+            canvasmaker=PageNumCanvas  # Usar nuestro canvas personalizado
+        )
         
         return response
-
+        
 
     # Registrar URLs custom
     def get_urls(self):
