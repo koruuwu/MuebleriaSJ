@@ -93,6 +93,16 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("Metodo de pago seleccionado " + valor);
         cuotasInput.disabled = false; // desbloquear por defecto
         cuotasInput.checked = false;
+        // SI estaba seleccionado Mixto (4) y CAMBIA a otro método
+        if (metodoPagoSelect.dataset.ultimoValor == 4 && valor !== 4) {
+
+            console.log("Saliendo de Mixto → limpiando tarjeta y efectivo");
+
+            tarjetaInput.value = "";
+            efectivoInput.value = "";
+            mensaje_ta.textContent = "";  // limpia el mensaje
+        }
+
 
 
         switch (valor) {
@@ -127,6 +137,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 
 
         }
+        // Guardar el método seleccionado como referencia para la próxima comparación
+        metodoPagoSelect.dataset.ultimoValor = valor;
+
         actualizarBasePagado()
 
         actualizarEstiloDeshabilitado();

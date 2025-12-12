@@ -1,12 +1,33 @@
+console.log("hola")
 document.addEventListener("DOMContentLoaded", function () {
     const subtotalInput = document.querySelector("#id_subtotal");
     const isvInput = document.querySelector("#id_isv");
     const totalInput = document.querySelector("#id_total");
+    const cotizacionSelect = document.querySelector('#id_id_cotizacion');
 
     // Hacer campos de solo lectura
     if (subtotalInput) subtotalInput.readOnly = true;
     if (isvInput) isvInput.readOnly = true;
     if (totalInput) totalInput.readOnly = true;
+    cotizacionSelect.setAttribute('readonly', true);
+
+    // 2. Bloquear la apertura del Select2
+    $(cotizacionSelect).on("select2:opening", function (e) {
+        if (cotizacionSelect.hasAttribute('readonly')) {
+            e.preventDefault();
+        }
+    });
+
+    // 3. Evitar borrar/limpiar selección
+    $(cotizacionSelect).on("select2:unselecting", function (e) {
+        if (cotizacionSelect.hasAttribute('readonly')) {
+            e.preventDefault();
+        }
+    });
+
+
+
+
 
     function getAdminBaseUrl() {
         const parts = window.location.pathname.split("/");
@@ -63,6 +84,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const precioInput = fila.querySelector('input[id$="-precio_unitario"]');
         const cantidadInput = fila.querySelector('input[id$="-cantidad"]');
         const subtotalInput = fila.querySelector('input[id$="-subtotal"]');
+        if (precioInput) precioInput.readOnly = true;
+        if (subtotalInput) subtotalInput.readOnly = true;
+        console.log("se entro aqui")
 
         if (!muebleSelect || !precioInput || !cantidadInput || !subtotalInput) {
             console.warn("Campos faltantes en fila", { fila });

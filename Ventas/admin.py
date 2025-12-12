@@ -294,6 +294,10 @@ class DetallesOrdeneForm(forms.ModelForm):
     class Meta:
         model = DetallesOrdene
         fields = '__all__'
+        widgets = {   
+            'cantidad': WidgetsRegulares.numero(4, False, "Ej: 10"),         
+        }
+   
 
     def clean(self):
         cleaned_data = super().clean()
