@@ -565,6 +565,51 @@ class WidgetsRegulares:
                 return false;
             """
         })
+    
+    @staticmethod
+    def rtn(placeholder="####-####-######"):
+        return forms.TextInput(attrs={
+            'maxlength': 16,  # 14 dígitos + 2 guiones
+            'placeholder': placeholder,
+            'style': 'width: 300px;',
+
+            'oninput': """
+                // Solo permitir números
+                this.value = this.value.replace(/[^0-9]/g, '');
+
+                // Máximo 14 dígitos reales
+                if (this.value.length > 14) this.value = this.value.slice(0, 14);
+
+                // Aplicar formato ####-####-######
+                let v = this.value;
+                let formatted = '';
+                if (v.length > 0) formatted = v.slice(0, 4);
+                if (v.length > 4) formatted += '-' + v.slice(4, 8);
+                if (v.length > 8) formatted += '-' + v.slice(8, 14);
+                this.value = formatted;
+            """,
+
+            'onblur': """
+                // Validación de formato exacto
+                const regexRTN = /^\\d{4}-\\d{4}-\\d{6}$/;
+
+                if (this.value && !regexRTN.test(this.value)) {
+                    this.style.borderColor = '#dc3545';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+                } else if (this.value) {
+                    this.style.borderColor = '#28a745';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(40,167,69,.25)';
+                }
+            """,
+
+            'onfocus': """
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            """
+        })
+
+
+
 
 
 class WidgetsEspeciales:
@@ -582,3 +627,4 @@ class WidgetsEspeciales:
             'oninput': "this.value = this.value.replace(/\\s{2,}/g, ' ');",
             'placeholder': placeholder,
         })
+    

@@ -38,6 +38,7 @@ class ClienteForm(ValidacionesBaseForm):
             'nombre': WidgetsRegulares.nombre(),
             'telefono': WidgetsRegulares.telefono(),
             'direccion': WidgetsRegulares.direccion(),
+            'rtn': WidgetsRegulares.rtn(),
         }
     
         
