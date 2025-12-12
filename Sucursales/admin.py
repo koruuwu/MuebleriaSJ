@@ -17,9 +17,23 @@ class SucursaleForm(ValidacionesBaseForm):
             'direccion': WidgetsRegulares.direccion(),
         }
 
+class CAIMForm(ValidacionesBaseForm):
+    class Meta:
+        fields = "__all__"
+        model = Cai
+        widgets = {
+            'rango_inicial': WidgetsRegulares.numero(8, False, "Ej: 10"),
+            'rango_final': WidgetsRegulares.numero(8, False, "Ej: 10"),
+            'codigo_cai': WidgetsRegulares.cai(),
+        }
+    
+    
+
+
 class CaiInline(admin.StackedInline):
     model = Cai
     extra = 0
+    form = CAIMForm
     
     '''class Media:
         js = ('js/estados/cai.js',)'''

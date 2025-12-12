@@ -23,7 +23,7 @@ from django.utils import timezone
 
 class Cai(models.Model):
     id = models.BigAutoField(primary_key=True)
-    codigo_cai = models.CharField(db_column='Codigo_Cai')
+    codigo_cai = models.CharField(db_column='Codigo_Cai', max_length=37)
     fecha_emision = models.DateField(db_column='Fecha_Emision')
     fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento')
     rango_inicial = models.CharField(db_column='Rango_Inicial')

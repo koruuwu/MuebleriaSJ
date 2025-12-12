@@ -155,6 +155,52 @@ class WidgetsRegulares:
             'class': 'email-widget'
         })
     
+    @staticmethod
+    def cai(placeholder="####-####-######-######-######-##"):
+        return forms.TextInput(attrs={
+            'maxlength': 53,  # incluye guiones, evita crashes por tipeo rápido
+            'placeholder': placeholder,
+            'style': 'width: 280px;',
+            'oninput': """
+                // permitir solo números y guiones
+                this.value = this.value.replace(/[^0-9-]/g, '');
+                
+                // remover todos los guiones
+                let v = this.value.replace(/-/g, '');
+                
+                // máximo 44 dígitos del CAI
+                if (v.length > 44) v = v.slice(0,44);
+
+                // volver a aplicar formato ####-####-######-######-######-##
+                let formatted = '';
+                if (v.length > 0) formatted = v.slice(0,4);
+                if (v.length > 4) formatted += '-' + v.slice(4,8);
+                if (v.length > 8) formatted += '-' + v.slice(8,14);
+                if (v.length > 14) formatted += '-' + v.slice(14,20);
+                if (v.length > 20) formatted += '-' + v.slice(20,26);
+                if (v.length > 26) formatted += '-' + v.slice(26,28);
+
+                this.value = formatted;
+            """,
+
+            'onblur': """
+                // Validar con expresión regular oficial del CAI
+                const regexCAI = /^\\d{4}-\\d{4}-\\d{6}-\\d{6}-\\d{6}-\\d{2}$/;
+
+                if (this.value && !regexCAI.test(this.value)) {
+                    this.style.borderColor = '#dc3545';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+                } else {
+                    this.style.borderColor = '#28a745';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(40,167,69,.25)';
+                }
+            """,
+
+            'onfocus': """
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            """
+        })
 
 
     @staticmethod
@@ -199,6 +245,56 @@ class WidgetsRegulares:
             """
         })
     
+    @staticmethod
+    def cai(placeholder="######-######-######-######-######-##"):
+        return forms.TextInput(attrs={
+            'maxlength': 39,  # 32 caracteres + 5 guiones + margen por tipeo rápido
+            'placeholder': placeholder,
+            'style': 'width: 500px; text-transform: uppercase;',  # fuerza visual a mayúsculas
+
+            'oninput': """
+                // Convertir a mayúsculas
+                this.value = this.value.toUpperCase();
+
+                // Aceptar solo alfanumérico mayúscula y guiones
+                this.value = this.value.replace(/[^A-Z0-9-]/g, '');
+
+                // Quitar guiones para formatear
+                let v = this.value.replace(/-/g, '');
+
+                // Máximo 32 caracteres reales
+                if (v.length > 32) v = v.slice(0, 32);
+
+                // Volver a aplicar formato 6-6-6-6-6-2
+                let f = '';
+                if (v.length > 0) f = v.slice(0, 6);
+                if (v.length > 6) f += '-' + v.slice(6, 12);
+                if (v.length > 12) f += '-' + v.slice(12, 18);
+                if (v.length > 18) f += '-' + v.slice(18, 24);
+                if (v.length > 24) f += '-' + v.slice(24, 30);
+                if (v.length > 30) f += '-' + v.slice(30, 32);
+
+                this.value = f;
+            """,
+
+            'onblur': """
+                // Regex alfanumérico oficial corregido
+                const regexCAI = /^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{2}$/;
+
+                if (this.value && !regexCAI.test(this.value)) {
+                    this.style.borderColor = '#dc3545';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+                } else {
+                    this.style.borderColor = '#28a745';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(40,167,69,.25)';
+                }
+            """,
+
+            'onfocus': """
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            """
+        })
 
     @staticmethod
     def tarjeta(maxim=4, min_len=4, placeholder="Ej: 0001"):
