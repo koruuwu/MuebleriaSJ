@@ -25,6 +25,9 @@ class HistorialPInline(admin.TabularInline):
         return False
     def has_change_permission(self, request, obj = ...):
         return False
+    def has_delete_permission(self, request, obj=None):
+        return False
+    
 
 class MuebleForm(ValidacionesBaseForm):
     archivo_temp = forms.FileField(required=False, label="Subir imagen")
@@ -35,7 +38,7 @@ class MuebleForm(ValidacionesBaseForm):
         widgets = {
             'nombre': WidgetsRegulares.nombre("Ej: Lusiana Pérez"),     
             'descripcion': WidgetsRegulares.comentario("Ej: Mueble color gris, ideal para 4 personas"),
-            'precio_base': WidgetsRegulares.precio(6, False, "Ej: 20,000"),
+            'precio_base': WidgetsRegulares.precio_decimal(6, False, "Ej: 20,000"),
             'alto': WidgetsRegulares.numero(4, False, "Ej: 10"),
             'ancho': WidgetsRegulares.numero(4, False, "Ej: 5"),
             'largo': WidgetsRegulares.numero(4, False, "Ej: 20"),
@@ -96,7 +99,7 @@ class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixi
 
 
     bucket_name="muebles"
-    inlines=[MuebleMaterialeInline]
+    inlines=[MuebleMaterialeInline, HistorialPInline]
     fieldsets = [
         ("Información General", {"fields": ("nombre", "descripcion","precio_base","categoria","Descontinuado","archivo_temp","imagen","imagen_url")}),
         ("Medidas", {"fields": ("medida","alto","ancho","largo","tamano")}),

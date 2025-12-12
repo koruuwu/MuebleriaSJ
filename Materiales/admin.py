@@ -130,6 +130,9 @@ class HistorialPInline(admin.TabularInline):
         return False
     def has_change_permission(self, request, obj = ...):
         return False
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 class CalificacionInline(admin.StackedInline):
     model = Calificacione

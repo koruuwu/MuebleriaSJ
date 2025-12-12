@@ -36,52 +36,6 @@ class Mueble(models.Model):
     archivo_temp = None
     stock_minimo = models.BigIntegerField(db_column='Stock_Minimo')  # Field name made lowercase.
     stock_maximo = models.BigIntegerField(db_column='Stock_Maximo') 
-    def __str__(self):
-        return self.nombre
-
-
-    class Meta:
-        managed = False
-        db_table = 'Muebles'
-
-class Tamaño(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
-    descripcion = models.CharField(db_column='Descripcion', blank=True, null=True, max_length=50)  # Field name made lowercase.
-    def __str__(self):
-        return self.nombre
-
-
-    class Meta:
-        managed = False
-        db_table = 'Tamano'
-
-
-class MuebleMateriale(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    id_material = models.ForeignKey(Materiale, models.DO_NOTHING, db_column='id_material', blank=False, null=False)
-    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='id_mueble', blank=False, null=False)
-    cantidad = models.BigIntegerField(db_column='Cantidad', blank=False, null=False)  # Field name made lowercase.
-    
-    def __str__(self):
-        # Mostrar "Cliente - Documento"
-        return f"{self.id_material.nombre} - {self.id_mueble.nombre}: {self.cantidad}"
-
-    class Meta:
-        managed = False
-        db_table = 'Mueble_Material'
-
-
-class HistorialPreciosMueble(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    precio = models.FloatField(db_column='Precio')  # Field name made lowercase.
-    fecha_inicio = models.DateField(db_column='Fecha_Inicio')  # Field name made lowercase.
-    fecha_fin = models.DateField(db_column='Fecha_Fin', blank=True, null=True)  # Field name made lowercase.
-    id_mueble = models.ForeignKey('Muebles', models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
-    
-    class Meta:
-        managed = False
-        db_table = 'Historial_Precios_muebles'
 
     def save(self, *args, **kwargs):
         hoy = timezone.now().date()
@@ -118,3 +72,55 @@ class HistorialPreciosMueble(models.Model):
                 fecha_fin=None,
                 id_mueble=self
             )
+
+    def __str__(self):
+        return self.nombre
+    
+    
+
+
+    class Meta:
+        managed = False
+        db_table = 'Muebles'
+
+class Tamaño(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
+    descripcion = models.CharField(db_column='Descripcion', blank=True, null=True, max_length=50)  # Field name made lowercase.
+    def __str__(self):
+        return self.nombre
+
+
+    class Meta:
+        managed = False
+        db_table = 'Tamano'
+
+
+class MuebleMateriale(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    id_material = models.ForeignKey(Materiale, models.DO_NOTHING, db_column='id_material', blank=False, null=False)
+    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='id_mueble', blank=False, null=False)
+    cantidad = models.BigIntegerField(db_column='Cantidad', blank=False, null=False)  # Field name made lowercase.
+    
+    def __str__(self):
+        # Mostrar "Cliente - Documento"
+        return f"{self.id_material.nombre} - {self.id_mueble.nombre}: {self.cantidad}"
+
+    class Meta:
+        managed = False
+        db_table = 'Mueble_Material'
+    
+
+
+class HistorialPreciosMueble(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    precio = models.FloatField(db_column='Precio')  # Field name made lowercase.
+    fecha_inicio = models.DateField(db_column='Fecha_Inicio')  # Field name made lowercase.
+    fecha_fin = models.DateField(db_column='Fecha_Fin', blank=True, null=True)  # Field name made lowercase.
+    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
+    
+    class Meta:
+        managed = False
+        db_table = 'Historial_Precios_muebles'
+
+    
