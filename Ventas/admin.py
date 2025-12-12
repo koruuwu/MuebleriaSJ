@@ -17,6 +17,7 @@ from Sucursales.models import Cai
 from Compras.models import InventarioMueble
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
+from proyecto.utils.admin_utils import  PaginacionAdminMixin
 
 def obtener_cai_valido(sucursal):
     hoy = timezone.now().date()
@@ -348,7 +349,7 @@ class DetallesOInline(admin.StackedInline):
  
 
 @admin.register(OrdenesVenta)
-class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
+class OrdenesVentasAdmin(PaginacionAdminMixin,ValidacionInventarioMixin, admin.ModelAdmin):
     form = OrdenForm
     inlines = [DetallesOInline]
     change_form_template = "admin/orden_venta_change_form.html"
@@ -1068,6 +1069,7 @@ class OrdenesVentasAdmin(ValidacionInventarioMixin, admin.ModelAdmin):
         ("General", {"fields": ("id_factura", "id_cotizacion","id_empleado","id_cliente","rtn","descuento","subtotal","isv","total","fecha_entrega","fecha_orden")}),
         ("Pago", {"fields": ("cuotas","id_metodo_pago","aporte", "pagado","efectivo","num_tarjeta","id_estado_pago")}),
     ]
+    list_filter  = ('id_metodo_pago', 'id_estado_pago', 'id_empleado')
 
     from reportlab.pdfgen.canvas import Canvas
 

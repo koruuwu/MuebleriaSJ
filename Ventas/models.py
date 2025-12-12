@@ -11,7 +11,7 @@ class OrdenesVenta(models.Model):
     cai_usado = models.ForeignKey(Cai, models.DO_NOTHING, db_column='cai_usado', blank=True, null=True)
     id_factura = models.CharField(db_column='ID_Factura', blank=True, null=True)  # Field name made lowercase.
     id_cotizacion = models.ForeignKey('Compras.Cotizacione', models.DO_NOTHING, db_column='ID_Cotizacion', blank=True, null=True, verbose_name="Cotizacion") 
-    id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True) # Field name made lowercase.
+    id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True, verbose_name="Empleado") # Field name made lowercase.
     id_cliente = models.ForeignKey('clientes.Cliente', models.DO_NOTHING, db_column='ID_Cliente',verbose_name="Cliente")  # Field name made lowercase.
     rtn = models.BooleanField(db_column='RTN', blank=False, null=False)  # Field name made lowercase.
     descuento = models.FloatField(db_column='Descuento', null=True, blank=True)  # Field name made lowercase.
@@ -25,7 +25,7 @@ class OrdenesVenta(models.Model):
     fecha_orden = models.DateTimeField(db_column='Fecha_Orden', auto_now_add=True )  # Field name made lowercase.
     fecha_entrega = models.DateField(db_column='Fecha_Entrega')  # Field name made lowercase
     efectivo = models.FloatField(blank=True, null=True)
-    num_tarjeta = models.CharField(blank=True, null=True, max_length=4)
+    num_tarjeta = models.CharField(blank=True, null=True, max_length=4, verbose_name="Numero de Tarjeta")
 
     def __str__(self):
         if self.id_factura:
