@@ -57,6 +57,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const precioInput = fila.querySelector('input[id$="-precio_unitario"]');
         const cantidadInput = fila.querySelector('input[id$="-cantidad"]');
         const subtotalInput = fila.querySelector('input[id$="-subtotal"]');
+        subtotalInput.readOnly=true;
+        precioInput.readOnly=true;
 
         if (!muebleSelect || !precioInput || !cantidadInput || !subtotalInput) return;
 

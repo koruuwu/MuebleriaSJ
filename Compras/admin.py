@@ -38,7 +38,7 @@ class CotizacioneForm(ValidacionesBaseForm):
         model = Cotizacione
         fields = "__all__"
         widgets = {
-            
+            'cantidad': WidgetsRegulares.numero(3, False, "Ej: 10"),
         }
 
 
@@ -182,6 +182,7 @@ class InventarioMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
 
 class DetalleCotizacionesInline(admin.StackedInline):
     model = DetalleCotizaciones
+    form=CotizacioneForm
     extra = 0
 
     class Media:
