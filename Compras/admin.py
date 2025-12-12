@@ -19,6 +19,9 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from Empleados.models import PerfilUsuario
 
+
+
+
 class InventarioForm(ValidacionesBaseForm):
     class Meta:
         fields = "__all__"
@@ -641,17 +644,25 @@ class RequerimientoForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
+        material = cleaned_data.get('material')
+        proveedor = cleaned_data.get('proveedor')
+        cantidad = cleaned_data.get('cantidad_necesaria')  # o como lo llames
 
-        precio = cleaned_data.get("precio_actual")
-        cantidad = cleaned_data.get("cantidad_necesaria")
+        if material and proveedor and cantidad:
+            rel = MaterialProveedore.objects.filter(
+                material=material,
+                id_proveedor=proveedor
+            ).first()
+            precio = rel.precio_actual if rel else 0
 
-        # Validación de precio
-        if precio is None or precio <= 0:
-            self.add_error("precio_actual", "El precio debe ser mayor a 0")
+            # Validación de cantidad, stock, etc.
+            stock_maximo = material.stock_maximo
+            if stock_maximo and cantidad > stock_maximo:
+                self.add_error('cantidad_necesaria',
+                            f'La cantidad no puede exceder el stock máximo de {stock_maximo}')
 
-        # Validación de cantidad
-        if cantidad is None or cantidad <= 0:
-            self.add_error("cantidad_necesaria", "La cantidad necesaria debe ser mayor a 0")
+            # Guardar precio en el cleaned_data si quieres usarlo después
+            cleaned_data['precio_actual'] = precio
 
         return cleaned_data
 class ListaCInline(admin.StackedInline):

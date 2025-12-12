@@ -25,8 +25,8 @@ def obtener_cai_valido(sucursal):
     with transaction.atomic():
         cais = Cai.objects.select_for_update().filter(sucursal=sucursal)
 
+        # Primero filtrar los válidos según fecha y rango
         cais_validos = []
-
         for cai in cais:
             valido = True
 
@@ -43,33 +43,37 @@ def obtener_cai_valido(sucursal):
             except:
                 valido = False
 
-            # Apagar inválidos
-            if not valido:
-                if cai.activo:
-                    cai.activo = False
-                    cai.save(update_fields=['activo'])
-            else:
+            # Desactivar inválidos
+            if not valido and cai.activo:
+                cai.activo = False
+                cai.save(update_fields=['activo'])
+            elif valido:
                 cais_validos.append(cai)
 
         if not cais_validos:
             return None
 
-        # ✅ PERMITIR LOS QUE VENCEN HOY
-        candidatos = [
-            c for c in cais_validos
-            if c.fecha_vencimiento and c.fecha_vencimiento >= hoy
-        ]
+        # Si ya hay un CAI activo válido, lo devolvemos directamente
+        cai_activo = next((c for c in cais_validos if c.activo), None)
+        if cai_activo:
+            return cai_activo
+
+        # Filtrar candidatos que vencen hoy o después
+        candidatos = [c for c in cais_validos if c.fecha_vencimiento and c.fecha_vencimiento >= hoy]
 
         if not candidatos:
             return None
 
-        ganador = sorted(candidatos, key=lambda x: x.fecha_vencimiento)[0]
+        # Ordenar por fecha de vencimiento y luego por rango inicial para desempate consistente
+        ganador = sorted(candidatos, key=lambda x: (x.fecha_vencimiento, int(x.rango_inicial or 0)))[0]
 
-        Cai.objects.filter(sucursal=sucursal).update(activo=False)
-        ganador.activo = True
-        ganador.save(update_fields=['activo'])
+        # Activar ganador y desactivar los demás
+        for c in cais_validos:
+            c.activo = (c == ganador)
+            c.save(update_fields=['activo'])
 
         return ganador
+
 
 
 def validar_stock_mueble(mueble, cantidad, sucursal):
