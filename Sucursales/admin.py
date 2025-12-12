@@ -15,6 +15,7 @@ class SucursaleForm(ValidacionesBaseForm):
             'nombre': WidgetsEspeciales.nombreSucursal(),
             'telefono': WidgetsRegulares.telefono(),
             'direccion': WidgetsRegulares.direccion(),
+            'rtn': WidgetsRegulares.rtn(),
         }
 
 class CAIMForm(ValidacionesBaseForm):
