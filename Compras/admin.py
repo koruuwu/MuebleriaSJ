@@ -637,7 +637,14 @@ class RequerimientoForm(forms.ModelForm):
                 self.fields["material"].queryset = Materiale.objects.filter(
                     materialproveedore__id_proveedor=self.instance.proveedor
                 ).distinct()
+    def clean(self):
+        cleaned_data = super().clean()
+        precio = cleaned_data.get("precio_actual")  # Cambia según el nombre real del campo
 
+        if precio is None or precio <= 0:
+            self.add_error("precio_actual", "El precio debe ser mayor a 0")
+
+        return cleaned_data
 class ListaCInline(admin.StackedInline):
     form = RequerimientoForm
     model = RequerimientoMateriale
