@@ -100,6 +100,7 @@ class MaterialeAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenM
     unique_fields = ['nombre']#Validador de valores repetidos
     form = MaterialeForm
     list_display = ("nombre","categoria", "stock_minimo","stock_maximo", "vista_previa")
+    list_filter = ('categoria','medida',)
     bucket_name="materiales"
 
 @admin.register(CategoriasMateriale)
