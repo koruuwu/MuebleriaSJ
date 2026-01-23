@@ -137,6 +137,7 @@ DATABASES = {
         'OPTIONS': {
             'sslmode': 'require',
         },
+        
 
     }
 }
