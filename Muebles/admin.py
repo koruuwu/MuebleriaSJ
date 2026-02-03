@@ -43,6 +43,32 @@ class MuebleForm(ValidacionesBaseForm):
             'ancho': WidgetsRegulares.numero(4, False, "Ej: 5"),
             'largo': WidgetsRegulares.numero(4, False, "Ej: 20"),
         }
+    
+    def clean_archivo_temp(self):
+        archivo = self.cleaned_data.get('archivo_temp')
+
+        if archivo:
+            # Extensión
+            ext = archivo.name.lower().split('.')[-1]
+
+            # Tipo MIME
+            mime = archivo.content_type
+
+            extensiones_permitidas = ['jpg', 'jpeg', 'png']
+            mime_permitidos = ['image/jpeg', 'image/png']
+
+            if ext not in extensiones_permitidas:
+                raise forms.ValidationError(
+                    "La imagen debe ser JPG, JPEG o PNG."
+                )
+
+            if mime not in mime_permitidos:
+                raise forms.ValidationError(
+                    "El archivo no es una imagen válida."
+                )
+
+        return archivo
+        
 
     def clean_nombre(self):
         nombre = self.cleaned_data.get('nombre', '')

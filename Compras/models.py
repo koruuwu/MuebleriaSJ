@@ -21,6 +21,8 @@ class InventarioMueble(models.Model):
     class Meta:
         managed = False
         db_table = 'Inventario_Muebles'
+        verbose_name = 'Inventario de Mueble'
+        verbose_name_plural = 'Inventarios de Muebles'
 
 class Estados(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -32,6 +34,8 @@ class Estados(models.Model):
     class Meta:
         managed = False
         db_table = 'Estados_M'
+        verbose_name = 'Estado de Mueble'
+        verbose_name_plural = 'Estados de Muebles'
 
 
 class Cotizacione(models.Model):
@@ -49,6 +53,8 @@ class Cotizacione(models.Model):
     class Meta:
         managed = False
         db_table = 'Cotizaciones'
+        verbose_name = 'Cotización'
+        verbose_name_plural = 'Cotizaciones'
 
 class Parametro(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -58,6 +64,8 @@ class Parametro(models.Model):
     class Meta:
         managed = False
         db_table = 'Parametros'
+        verbose_name = 'Parámetro'
+        verbose_name_plural = 'Parámetros'
 
     def __str__(self):
         return f"{self.nombre} = {self.valor}"
@@ -76,6 +84,8 @@ class DetalleCotizaciones(models.Model):
     class Meta:
         managed = False
         db_table = 'Detalle_Cotizaciones'
+        verbose_name = 'Detalle de Cotización'
+        verbose_name_plural = 'Detalles de Cotizaciones'
 
 #-------------------COMPRAS----------------
 ALTA = 'alta'
@@ -128,6 +138,8 @@ class ListaCompra(models.Model):
     class Meta:
         managed = False
         db_table = 'Lista_Compras'
+        verbose_name = 'Lista de Compra'
+        verbose_name_plural = 'Listas de Compras'
 
 
 
@@ -195,6 +207,8 @@ class RequerimientoMateriale(models.Model):
     class Meta:
         managed = False
         db_table = 'Requerimiento_Material'
+        verbose_name = 'Requerimiento de Material'
+        verbose_name_plural = 'Requerimientos de Materiales'
 
 class DetalleRecibido(models.Model):
     COMP = 'completo'
@@ -218,6 +232,8 @@ class DetalleRecibido(models.Model):
     class Meta:
         managed = False
         db_table = 'Detalle_recibido'
+        verbose_name = 'Detalle Recibido'
+        verbose_name_plural = 'Detalles Recibidos'
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
@@ -301,5 +317,7 @@ class InventarioMateriale(models.Model):
     class Meta:
         managed = False
         db_table = 'Inventario_Materiales'
+        verbose_name = 'Inventario de Material'
+        verbose_name_plural = 'Inventarios de Materiales'
 
         

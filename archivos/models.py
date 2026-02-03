@@ -17,6 +17,8 @@ class Documento(models.Model):
     class Meta:
         managed = False  # Ya existe en la base de datos
         db_table = 'Documentos'
+        verbose_name = 'Documento'
+        verbose_name_plural = 'Documentos'
 
     def __str__(self):
         return self.tipo_documento

@@ -41,6 +41,8 @@ class Empleado(models.Model):
     class Meta:
         managed = False
         db_table = 'Empleados'
+        verbose_name = 'Empleado'
+        verbose_name_plural = 'Empleados'
 
 
 from django.contrib.auth.models import User

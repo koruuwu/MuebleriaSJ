@@ -21,6 +21,8 @@ class Materiale(models.Model):
     class Meta:
         managed = False
         db_table = 'Materiales'
+        verbose_name = 'Material'
+        verbose_name_plural = 'Materiales'
 
 class CategoriasMateriale(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -38,6 +40,8 @@ class CategoriasMateriale(models.Model):
     class Meta:
         managed = False
         db_table = 'Categorias_Materiales'
+        verbose_name = 'Categoría de Material'
+        verbose_name_plural = 'Categorías de Materiales'
 
 
     
@@ -53,6 +57,8 @@ class UnidadesMedida(models.Model):
     class Meta:
         managed = False
         db_table = 'Unidades_Medida'
+        verbose_name = 'Unidad de Medida'
+        verbose_name_plural = 'Unidades de Medida'
 
 
 class Proveedore(models.Model):
@@ -69,6 +75,8 @@ class Proveedore(models.Model):
     class Meta:
         managed = False
         db_table = 'Proveedores'
+        verbose_name = 'Proveedor'
+        verbose_name_plural = 'Proveedores'
 
 
 class HistorialPrecio(models.Model):
@@ -82,6 +90,8 @@ class HistorialPrecio(models.Model):
     class Meta:
         managed = False
         db_table = 'Historial_Precios'
+        verbose_name = 'Historial de Precio'
+        verbose_name_plural = 'Historiales de Precios'
 
 
 
@@ -120,6 +130,8 @@ class Calificacione(models.Model):
     class Meta:
         managed = False
         db_table = 'Calificaciones'
+        verbose_name = 'Calificación'
+        verbose_name_plural = 'Calificaciones'
 
 
 class EstadosPersonas(models.Model):
@@ -132,6 +144,8 @@ class EstadosPersonas(models.Model):
     class Meta:
         managed = False
         db_table = 'Estados_personas'
+        verbose_name = 'Estado de Persona'
+        verbose_name_plural = 'Estados de Personas'
 
 class MaterialProveedore(models.Model):
     DIAS = 'dias'
@@ -209,3 +223,5 @@ class MaterialProveedore(models.Model):
     class Meta:
         managed = False
         db_table = 'Material_proveedor'
+        verbose_name = 'Material Proveedor'
+        verbose_name_plural = 'Materiales Proveedores'

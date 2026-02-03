@@ -23,6 +23,8 @@ class Cliente(models.Model):
     class Meta:
         managed = False
         db_table = 'Clientes'
+        verbose_name = 'Cliente'
+        verbose_name_plural = 'Clientes'
 
 
 
@@ -40,6 +42,8 @@ class DocumentosCliente(models.Model):
     class Meta:
         managed = False
         db_table = 'Documentos_Clientes'
+        verbose_name = 'Documento del Cliente'
+        verbose_name_plural = 'Documentos de los Clientes'
 
     def clean(self):
         # Evita duplicados cliente + documento + valor

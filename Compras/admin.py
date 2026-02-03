@@ -48,8 +48,8 @@ class CotizacioneForm(ValidacionesBaseForm):
 @admin.register(InventarioMueble)
 class InventarioMuebleAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     form = InventarioForm
+    search_fields = ('id_mueble__nombre', 'ubicación__nombre')
     list_display = ("id_mueble","cantidad_disponible", "estado", "ubicación")
-    search_fields = ('id_mueble', 'ubicación')
     readonly_fields=('ultima_entrada', 'ultima_salida')
     list_filter = ('estado','ubicación')
     class Media:

@@ -50,6 +50,8 @@ class OrdenMensuale(models.Model):
     class Meta:
         managed = False
         db_table = 'Orden_Mensuales'
+        verbose_name = 'Orden Mensual'
+        verbose_name_plural = 'Ordenes Mensuales'
 
 
 
@@ -82,6 +84,8 @@ class OrdenMensualDetalle(models.Model):
     class Meta:
         managed = False
         db_table = 'Orden_mensual_detalle'
+        verbose_name = 'Detalle de Orden Mensual'
+        verbose_name_plural = 'Detalles de Ordenes Mensuales'
 
 class AportacionEmpleado(models.Model):
     PEND = 'pendiente'
@@ -105,3 +109,5 @@ class AportacionEmpleado(models.Model):
     class Meta:
         managed = False
         db_table = 'aportacion_empleado'
+        verbose_name = 'Aportación de Empleado'
+        verbose_name_plural = 'Aportaciones de Empleados'

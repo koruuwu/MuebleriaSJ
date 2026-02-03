@@ -18,6 +18,8 @@ class CategoriasMueble(models.Model):
     class Meta:
         managed = False
         db_table = 'Categorias_Muebles'
+        verbose_name = 'Categoría de Mueble'
+        verbose_name_plural = 'Categorías de Muebles'
 
 class Mueble(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -82,6 +84,8 @@ class Mueble(models.Model):
     class Meta:
         managed = False
         db_table = 'Muebles'
+        verbose_name = 'Mueble'
+        verbose_name_plural = 'Muebles'
 
 class Tamaño(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -94,6 +98,8 @@ class Tamaño(models.Model):
     class Meta:
         managed = False
         db_table = 'Tamano'
+        verbose_name = 'Tamaño'
+        verbose_name_plural = 'Tamaños'
 
 
 class MuebleMateriale(models.Model):
@@ -109,6 +115,8 @@ class MuebleMateriale(models.Model):
     class Meta:
         managed = False
         db_table = 'Mueble_Material'
+        verbose_name = 'Mueble Material'
+        verbose_name_plural = 'Muebles Materiales'
     
 
 
@@ -122,5 +130,7 @@ class HistorialPreciosMueble(models.Model):
     class Meta:
         managed = False
         db_table = 'Historial_Precios_muebles'
+        verbose_name = 'Historial de Precio de Mueble'
+        verbose_name_plural = 'Historiales de Precios de Muebles'
 
     

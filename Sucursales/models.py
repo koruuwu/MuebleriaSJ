@@ -17,6 +17,8 @@ class Sucursale(models.Model):
     class Meta:
         managed = False
         db_table = 'Sucursales'
+        verbose_name = 'Sucursal'
+        verbose_name_plural = 'Sucursales'
 
 
 from django.utils import timezone
@@ -35,6 +37,8 @@ class Cai(models.Model):
     class Meta:
         managed = False
         db_table = 'CAI'
+        verbose_name = 'CAI'
+        verbose_name_plural = 'CAIs'
 
     def save(self, *args, **kwargs):
 
@@ -65,3 +69,5 @@ class Caja(models.Model):
     class Meta:
         managed = False
         db_table = 'caja'
+        verbose_name = 'Caja'
+        verbose_name_plural = 'Cajas'

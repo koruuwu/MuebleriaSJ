@@ -41,6 +41,8 @@ class OrdenesVenta(models.Model):
     class Meta:
         managed = False
         db_table = 'Ordenes_Ventas'
+        verbose_name = 'Orden de Venta'
+        verbose_name_plural = 'Ordenes de Ventas'
     
 
 class EstadoPagos(models.Model):
@@ -54,6 +56,8 @@ class EstadoPagos(models.Model):
     class Meta:
         managed = False
         db_table = 'Estado_Pagos'
+        verbose_name = 'Estado de Pago'
+        verbose_name_plural = 'Estados de Pago'
 
 class MetodosPago(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -63,6 +67,8 @@ class MetodosPago(models.Model):
     class Meta:
         managed = False
         db_table = 'Metodos_Pago'
+        verbose_name = 'Método de Pago'
+        verbose_name_plural = 'Métodos de Pago'
 
     def __str__(self):
         return self.tipo
@@ -80,3 +86,5 @@ class DetallesOrdene(models.Model):
     class Meta:
         managed = False
         db_table = 'Detalles_Orden'
+        verbose_name = 'Detalle de Orden'
+        verbose_name_plural = 'Detalles de Ordenes'

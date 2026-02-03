@@ -10,6 +10,8 @@ class Parametro(models.Model):
     class Meta:
         managed = False
         db_table = 'Parametros'
+        verbose_name = 'Parámetro'
+        verbose_name_plural = 'Parámetros'
 
     def __str__(self):
         return f"{self.nombre} = {self.valor}"

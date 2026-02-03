@@ -15,3 +15,5 @@ class Notificacione(models.Model):
     class Meta:
         managed = True
         db_table = 'Notificaciones'
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
