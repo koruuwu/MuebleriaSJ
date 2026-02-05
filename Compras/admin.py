@@ -198,7 +198,7 @@ from django.utils.html import format_html
 class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     form = CotizacioneForm
     list_display = ("cliente", "fecha_registro", "activo", "fecha_vencimiento", "convertir_a_orden")
-    search_fields = ('cliente',)
+    search_fields = ('cliente__nombre',)
     readonly_fields=("fecha_registro","fecha_vencimiento")
     list_filter = ('activo',)
     change_form_template = "admin/cotizacion_change_form.html"
@@ -617,7 +617,9 @@ class RequerimientoForm(forms.ModelForm):
         if "material" in self.fields:
             self.fields["material"].queryset = Materiale.objects.all()
         if "proveedor" in self.fields:
-            self.fields["proveedor"].queryset = Proveedore.objects.all()
+            self.fields["proveedor"].queryset = Proveedore.objects.filter(
+                estado__tipo='Activo'
+            )
 
         if data.get("material") and "proveedor" in self.fields:
             material_id = data.get("material")

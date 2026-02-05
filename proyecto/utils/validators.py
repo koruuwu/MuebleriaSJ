@@ -76,6 +76,9 @@ class ValidacionesBaseForm(forms.ModelForm):
         - No dobles espacios
         - No letras repetidas
         """
+        if valor is None:
+            raise ValidationError(f"{nombre_visible} es obligatorio.")
+        
         valor = valor.strip()
         valor = self.validar_longitud(valor, nombre_visible, min_len=min_len, max_len=max_len)
         valor = self.validar_dobles_espacios(valor, nombre_visible)
