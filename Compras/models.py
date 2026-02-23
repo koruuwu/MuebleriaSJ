@@ -141,6 +141,10 @@ class ListaCompra(models.Model):
         verbose_name = 'Lista de Compra'
         verbose_name_plural = 'Listas de Compras'
 
+    def __str__(self):
+        return f"Orden {self.id}"
+        
+
 
 
 class RequerimientoMateriale(models.Model):

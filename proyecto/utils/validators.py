@@ -3,6 +3,9 @@ import re
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from better_profanity import profanity as pf
+
+pf.load_censor_words_from_file("proyecto/utils/vocabulario.txt")
 
 class ValidacionesBaseForm(forms.ModelForm):
     """
@@ -83,6 +86,25 @@ class ValidacionesBaseForm(forms.ModelForm):
         valor = self.validar_longitud(valor, nombre_visible, min_len=min_len, max_len=max_len)
         valor = self.validar_dobles_espacios(valor, nombre_visible)
         valor = self.validar_letras_repetidas(valor, nombre_visible)
+        valor = self.validar_vocabulario_soez(valor, nombre_visible)
+        return valor
+    
+    
+    def normalizar_texto(self,texto):
+        texto = texto.lower()
+        texto = texto.lower()
+        texto = texto.strip()
+
+        # reduce letras repetidas: putaaaa → puta
+        texto = re.sub(r'(.)\1+', r'\1', texto)
+        return texto
+    
+
+    def validar_vocabulario_soez(self, valor, nombre_visible):
+        texto_normalizado = self.normalizar_texto(valor)
+        if pf.contains_profanity(texto_normalizado):
+            raise ValidationError(f"{nombre_visible} contiene lenguaje inapropiado.")
+
         return valor
     
 

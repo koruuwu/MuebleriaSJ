@@ -17,6 +17,8 @@ class WidgetsRegulares:
             'placeholder': placeholder,
         })
     
+    
+    
     #---AGREGAR CAMBIO NO ESPECIFICAR MAX LENGHT PARA VALORES DE PALABRAS, HACERLO DESDE MODEL-sofia castro
     @staticmethod
     def comentario(placeholder="Ej: Madera de mala calidad, entrega rapida"):
@@ -66,6 +68,36 @@ class WidgetsRegulares:
                 if (this.value.length > 4)
                     this.value = this.value.substring(0,4) + '-' + this.value.substring(4,8);
             """,
+            'placeholder': placeholder,
+        })
+    
+    @staticmethod
+    def codigos(placeholder="Ej: 1234"):
+        return forms.TextInput(attrs={
+            'maxlength': 20,
+            'onkeypress': """
+                const val = event.target.value;
+                const key = event.key;
+                if (!/[0-9]/.test(key)) return false;
+                return true;
+            """,
+            'oninput': "this.value = this.value.replace(/\\s{2,}/g, ' ');",
+            'placeholder': placeholder,
+        })
+    
+    @staticmethod
+    def abreviacionMedida(placeholder="Ej: cm"):
+        return forms.TextInput(attrs={
+            'maxlength': 4,
+            'onkeypress': """
+                const val = event.target.value;
+                const key = event.key;
+                if (!/[a-zA-Z]/.test(key)) return false;
+                if (val.length >= 2 && val.slice(-2) === key.repeat(2)) return false;
+                if (val.length === 0 && key === ' ') return false;
+                return true;
+            """,
+            'oninput': "this.value = this.value.replace(/\\s{2,}/g, ' ');",
             'placeholder': placeholder,
         })
     
@@ -325,7 +357,49 @@ class WidgetsRegulares:
             """
         })
 
+    @staticmethod
+    def precioWidget(max_digits=10, allow_zero=False, placeholder="Ej: 199.99"):
+        min_val = 0 if allow_zero else 1
 
+        return forms.TextInput(attrs={
+            'style': 'width: 200px;',
+            'placeholder': placeholder,
+            'oninput': f"""
+                let raw = this.value;
+
+                // Eliminar caracteres que no sean dígitos o punto
+                raw = raw.replace(/[^0-9.]/g, '');
+
+                // Permitir solo un punto
+                const parts = raw.split('.');
+                if (parts.length > 2) {{
+                    raw = parts[0] + '.' + parts[1];
+                }}
+
+                // Limitar decimales a 2
+                if (parts[1] && parts[1].length > 2) {{
+                    raw = parts[0] + '.' + parts[1].substring(0,2);
+                }}
+
+                // Limitar parte entera a max_digits
+                if (parts[0].length > {max_digits}) {{
+                    raw = parts[0].substring(0,{max_digits});
+                    if (parts[1]) {{
+                        raw += '.' + parts[1];
+                    }}
+                }}
+
+                this.setAttribute('data-raw-value', raw);
+                this.value = raw;
+            """,
+            'onblur': """
+                // Restaurar valor limpio al salir del campo
+                const raw = this.getAttribute('data-raw-value');
+                if (raw) {
+                    this.value = raw;
+                }
+            """,
+        })
 
 
     @staticmethod

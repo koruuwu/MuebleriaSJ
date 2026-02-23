@@ -1,4 +1,6 @@
 from django.contrib import admin, messages
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from .models import *
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
@@ -40,6 +42,22 @@ class ClienteForm(ValidacionesBaseForm):
             'direccion': WidgetsRegulares.direccion(),
             'rtn': WidgetsRegulares.rtn(),
         }
+
+        labels = {
+            'telefono': "Teléfono",
+            'direccion': "Dirección",
+        }
+
+    def clean_rtn(self):
+        rtn = self.cleaned_data.get('rtn', '')
+
+        if not rtn.isdigit():
+            raise forms.ValidationError("El RTN debe contener solo números.")
+
+        if len(rtn) != 14:
+            raise forms.ValidationError("El RTN debe tener exactamente 14 dígitos.")
+
+        return rtn
     
         
 class DocumentosClienteInline(admin.TabularInline):
@@ -59,7 +77,28 @@ class ClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     list_display_links = ('nombre',)
     list_filter = ()
     inlines = [DocumentosClienteInline]
-   
+
+    def delete_model(self, request, obj):
+        nombre = str(obj)
+        obj.delete()
+        self.message_user(request, f"El cliente '{nombre}' ha sido eliminado correctamente.", level=messages.SUCCESS)
+
+    def delete_queryset(self, request, queryset):
+        nombres = ', '.join([str(obj) for obj in queryset])
+        queryset.delete()
+        self.message_user(request, f'Clientes "{nombres}" fueron eliminados con éxito.', level=messages.SUCCESS)
+
+
+    def delete_view(self, request, object_id, extra_context=None):
+        obj = self.get_object(request, object_id)
+
+        if request.method == 'POST' and obj:
+            self.delete_model(request, obj)
+            # Redirige a la lista de Clientes usando reverse
+            url = reverse('admin:clientes_cliente_changelist')
+            return HttpResponseRedirect(url)
+
+        return super().delete_view(request, object_id, extra_context)
 
 
 

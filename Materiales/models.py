@@ -127,6 +127,9 @@ class Calificacione(models.Model):
     comentario = models.CharField(db_column='Comentario')  # Field name made lowercase.
     id_prov = models.ForeignKey(Proveedore, models.DO_NOTHING, db_column='ID_Prov', blank=True, null=True, verbose_name="Proveedor")  # Field name made lowercase.
 
+    def __str__(self):
+        return f"{self.criterio} - {self.calificacion}/5"
+
     class Meta:
         managed = False
         db_table = 'Calificaciones'

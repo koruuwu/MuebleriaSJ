@@ -15,6 +15,14 @@ SECRET_KEY = 'django-insecure-rog-af+&wv-4hgeofrrhb7*(u^r5g03y78e367=mnf107r_8+=
 DEBUG = True
 ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
 
+# settings.py
+import sys
+
+if 'test' in sys.argv:
+    MIGRATION_MODULES = {
+        'Parametros': None,
+    }
+
 # Application definition
 INSTALLED_APPS = [
     'jazzmin',

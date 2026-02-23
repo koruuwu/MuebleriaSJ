@@ -15,7 +15,7 @@ class Documento(models.Model):
             raise ValidationError({'tipo_documento': '⚠️ Este tipo de documento ya existe.'})
 
     class Meta:
-        managed = False  # Ya existe en la base de datos
+        managed = True  # Ya existe en la base de datos
         db_table = 'Documentos'
         verbose_name = 'Documento'
         verbose_name_plural = 'Documentos'

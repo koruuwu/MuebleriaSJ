@@ -21,7 +21,7 @@ class Cliente(models.Model):
 
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Clientes'
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
@@ -40,7 +40,7 @@ class DocumentosCliente(models.Model):
         return f"{self.id_cliente.nombre} - {self.id_documento.tipo_documento}: {self.valor}"
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Documentos_Clientes'
         verbose_name = 'Documento del Cliente'
         verbose_name_plural = 'Documentos de los Clientes'

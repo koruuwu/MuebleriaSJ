@@ -54,7 +54,7 @@ class EstadoPagos(models.Model):
         return self.nombre
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Estado_Pagos'
         verbose_name = 'Estado de Pago'
         verbose_name_plural = 'Estados de Pago'
@@ -65,7 +65,7 @@ class MetodosPago(models.Model):
     descripcion = models.CharField(db_column='Descripcion')  # Field name made lowercase.
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Metodos_Pago'
         verbose_name = 'Método de Pago'
         verbose_name_plural = 'Métodos de Pago'

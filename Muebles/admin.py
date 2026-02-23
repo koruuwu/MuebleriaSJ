@@ -1,6 +1,9 @@
 from attrs import fields
 from django.contrib import admin
 from django import forms
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+from django.contrib import messages
 from .models import *
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
@@ -43,6 +46,11 @@ class MuebleForm(ValidacionesBaseForm):
             'ancho': WidgetsRegulares.numero(4, False, "Ej: 5"),
             'largo': WidgetsRegulares.numero(4, False, "Ej: 20"),
         }
+
+        labels = {
+            'stock_minimo':"Stock Mínimo",
+            'stock_maximo':"Stock Máximo",
+            }
     
     def clean_archivo_temp(self):
         archivo = self.cleaned_data.get('archivo_temp')
@@ -87,6 +95,17 @@ class TamañoForm(ValidacionesBaseForm):
     def clean_nombre(self):
         nombre = self.cleaned_data.get('nombre', '')
         return self.validar_campo_texto(nombre, "El nombre", min_len=4, max_len=50)
+    
+class MuebleMaterialeForm(forms.ModelForm):
+    class Meta:
+        model = MuebleMateriale
+        fields = "__all__"
+
+    def clean_cantidad(self):
+        cantidad = self.cleaned_data.get("cantidad")
+        if cantidad <= 0:
+            raise forms.ValidationError("La cantidad debe ser mayor a 0.")
+        return cantidad
 
 
 
@@ -104,9 +123,31 @@ class TamanoAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     form=TamañoForm
     list_display = ("nombre", "descripcion")
 
+    def delete_model(self, request, obj):
+        nombre = str(obj)
+        obj.delete()
+        self.message_user(request, f"El tamaño '{nombre}' ha sido eliminado correctamente.", level=messages.SUCCESS)
+
+    def delete_queryset(self, request, queryset):
+        nombres = ', '.join([str(obj) for obj in queryset])
+        queryset.delete()
+        self.message_user(request, f'Los tamaños "{nombres}" fueron eliminados con éxito.', level=messages.SUCCESS)
+
+    def delete_view(self, request, object_id, extra_context=None):
+        obj = self.get_object(request, object_id)
+
+        if request.method == 'POST' and obj:
+            self.delete_model(request, obj)
+            
+            url = reverse('admin:%s_%s_changelist' % (self.model._meta.app_label, self.model._meta.model_name))
+            return HttpResponseRedirect(url)
+
+        return super().delete_view(request, object_id, extra_context)
+
 @admin.register(MuebleMateriale)
 class MuebleMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
-    list_display = ("id_mueble", "id_material")
+    form = MuebleMaterialeForm
+    list_display = ("id_mueble", "id_material", "cantidad")
 
 class MuebleMaterialeInline(admin.TabularInline):
     model = MuebleMateriale
@@ -120,7 +161,7 @@ class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixi
     form = MuebleForm
     unique_fields = ['nombre']
     list_display = ("nombre", "descripcion","alto","ancho","largo","medida", "vista_previa")
-    search_fields = ('nombre', 'medida')
+    search_fields = ('nombre', 'descripcion')
     list_filter = ('tamano__nombre',)
 
 

@@ -1,8 +1,38 @@
 from django.contrib import admin
 from .models import Parametro
 from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMixin
+from django import forms
+from proyecto.utils.validators import ValidacionesBaseForm
+from proyecto.utils.widgets import WidgetsRegulares
+
+
+class ParametroForm(ValidacionesBaseForm, forms.ModelForm):
+    class Meta:
+        model = Parametro
+        fields = "__all__"
+        widgets = {
+            'valor': WidgetsRegulares.numero(10, allow_zero=True, placeholder="Ej: 10"),
+        }
+
+    def clean_nombre(self):
+        valor = self.cleaned_data.get('nombre', '')
+        return self.validar_campo_texto(valor, "El nombre", min_len=2, max_len=50)
+    
+    def clean_valor(self):
+        valor = self.cleaned_data.get('valor', '')
+        
+        if not valor.isdigit():
+            raise forms.ValidationError("El valor debe ser un número positivo.")
+        
+        valor_num = float(valor)
+        if valor_num < 0:
+            raise forms.ValidationError("El valor debe ser un número positivo.")
+        
+        return valor
+
 @admin.register(Parametro)
 class ParametroAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+    form = ParametroForm
     list_display= ("id", "nombre","valor")
 
 

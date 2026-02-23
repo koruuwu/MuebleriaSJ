@@ -6,7 +6,7 @@ from proyecto.utils.widgets import WidgetsRegulares
 from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMixin
 from datetime import timedelta
 from django.urls import path
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django import forms
 from django.utils import timezone
 from Materiales.models import Materiale
@@ -18,7 +18,10 @@ from Notificaciones.utils.notificacio_reutilizable import crear_notificacion
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from Empleados.models import PerfilUsuario
-
+from django.contrib import messages
+from django.utils.translation import gettext as _
+from django.urls import reverse
+from django.utils.html import format_html
 
 
 
@@ -192,8 +195,7 @@ class DetalleCotizacionesInline(admin.StackedInline):
         js = ('js/detalle_cotizacion.js',)
 
     
-from django.urls import reverse
-from django.utils.html import format_html
+
 @admin.register(Cotizacione)
 class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     form = CotizacioneForm
@@ -216,6 +218,8 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
         )
 
     convertir_a_orden.short_description = "Orden de Venta"
+
+    
   
     
   
@@ -234,6 +238,43 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
             obj.fecha_vencimiento = obj.fecha_registro.date() + timedelta(days=dias_parametro)
 
         super().save_model(request, obj, form, change)
+
+    def delete_model(self, request, obj):
+        nombre = str(obj)
+        obj.delete()
+        self.message_user(request, f"La cotización '{nombre}' ha sido eliminada correctamente.", level=messages.SUCCESS)
+
+    def delete_queryset(self, request, queryset):
+        nombres = ', '.join([str(obj) for obj in queryset])
+        queryset.delete()
+        self.message_user(request, f'Las cotizaciones "{nombres}" fueron eliminadas con éxito.', level=messages.SUCCESS)
+
+    def delete_view(self, request, object_id, extra_context=None):
+        obj = self.get_object(request, object_id)
+
+        if request.method == 'POST' and obj:
+            self.delete_model(request, obj)
+            
+            url = reverse('admin:%s_%s_changelist' % (self.model._meta.app_label, self.model._meta.model_name))
+            return HttpResponseRedirect(url)
+
+        return super().delete_view(request, object_id, extra_context)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        """
+        Se ejecuta después de agregar un objeto.
+        Aquí podemos mostrar solo nuestro mensaje personalizado.
+        """
+        self.message_user(request, f'La cotización "{obj}" ha sido creada correctamente.', level=messages.SUCCESS)
+        
+        # Redirigir a la página de listado
+        return HttpResponseRedirect(self.get_admin_url('changelist'))
+
+    def get_admin_url(self, action):
+        """
+        Helper para generar la URL del admin para esta app/modelo
+        """
+        return reverse(f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_{action}')
 
     def obtener_precio_mueble(self, request, mueble_id):
         try:
@@ -743,6 +784,48 @@ class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
         if obj and obj.pk and obj.estado not in ['pendiente', 'rechazada','aprobada' ]:
             return [f.name for f in self.model._meta.fields]
         return super().get_readonly_fields(request, obj)
+    
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        """
+        Se ejecuta después de agregar un objeto.
+        Aquí podemos mostrar solo nuestro mensaje personalizado.
+        """
+        self.message_user(request, f'La lista de compra "{obj}" ha sido creada correctamente.', level=messages.SUCCESS)
+        
+        # Redirigir a la página de listado (o a donde quieras)
+        return HttpResponseRedirect(self.get_admin_url('changelist'))
+
+    def get_admin_url(self, action):
+        """
+        Helper para generar la URL del admin para esta app/modelo
+        """
+        return reverse(f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_{action}')
+
+        
+    
+    def delete_model(self, request, obj):
+        nombre = str(obj)
+        obj.delete()
+        self.message_user(request, f"La lista de compra '{nombre}' ha sido eliminada correctamente.", level=messages.SUCCESS)
+
+    def delete_queryset(self, request, queryset):
+        nombres = ', '.join([str(obj) for obj in queryset])
+        queryset.delete()
+        self.message_user(request, f'Listas de compra "{nombres}" fueron eliminadas con éxito.', level=messages.SUCCESS)
+
+    def delete_view(self, request, object_id, extra_context=None):
+        obj = self.get_object(request, object_id)
+
+        if request.method == 'POST' and obj:
+            self.delete_model(request, obj)
+            
+            url = reverse('admin:%s_%s_changelist' % (self.model._meta.app_label, self.model._meta.model_name))
+            return HttpResponseRedirect(url)
+
+        return super().delete_view(request, object_id, extra_context)
     
 
 
