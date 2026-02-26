@@ -1,4 +1,5 @@
 from django.db import models
+from Parametros.models import Parametro
 from Sucursales.models import Sucursale
 from Muebles.models import Mueble
 from clientes.models import Cliente
@@ -9,30 +10,30 @@ from Sucursales.models import Sucursale
 from Materiales.models import HistorialPrecio
 class InventarioMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
-    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
-    cantidad_disponible = models.BigIntegerField(db_column='Cantidad_Disponible')  # Field name made lowercase.
-    ubicación = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='ubicación', blank=True, null=True)
-    ultima_entrada = models.DateField(db_column='ultima entrada', blank=True, null=True)  # Field renamed to remove unsuitable characters.
-    ultima_salida = models.DateField(db_column='ultima salida', blank=True, null=True)  # Field renamed to remove unsuitable characters.
-    estado = models.ForeignKey('Estados', models.DO_NOTHING, db_column='Estado', blank=False, null=False, default=1)  
+    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING)  # Field name made lowercase.
+    cantidad_disponible = models.BigIntegerField()  # Field name made lowercase.
+    ubicación = models.ForeignKey(Sucursale, models.DO_NOTHING, blank=True, null=True)
+    ultima_entrada = models.DateField( blank=True, null=True)  # Field renamed to remove unsuitable characters.
+    ultima_salida = models.DateField( blank=True, null=True)  # Field renamed to remove unsuitable characters.
+    estado = models.ForeignKey('Estados', models.DO_NOTHING, blank=False, null=False, default=1)  
     def __str__(self):
      return str(self.id_mueble)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Inventario_Muebles'
         verbose_name = 'Inventario de Mueble'
         verbose_name_plural = 'Inventarios de Muebles'
 
 class Estados(models.Model):
     id = models.BigAutoField(primary_key=True)
-    tipo = models.CharField(db_column='Tipo', blank=True, null=True)  # Field name made lowercase.
+    tipo = models.CharField( blank=True, null=True)  # Field name made lowercase.
     def __str__(self):
         return self.tipo
 
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Estados_M'
         verbose_name = 'Estado de Mueble'
         verbose_name_plural = 'Estados de Muebles'
@@ -41,48 +42,35 @@ class Estados(models.Model):
 class Cotizacione(models.Model):
     id = models.BigAutoField(primary_key=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
-    activo = models.BooleanField(db_column='Estado', default=True)  # Field name made lowercase.
-    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento')  # Field name made lowercase.
-    cliente = models.ForeignKey(Cliente, models.DO_NOTHING, db_column='ID_Cliente')  # Field name made lowercase.
-    subtotal = models.FloatField(db_column='SubTotal', null=True, blank=True)
-    isv = models.FloatField(db_column='ISV', null=True, blank=True)
-    total = models.FloatField(db_column='Total', null=True, blank=True)
+    activo = models.BooleanField(default=True)  # Field name made lowercase.
+    fecha_vencimiento = models.DateField()  # Field name made lowercase.
+    cliente = models.ForeignKey(Cliente, models.DO_NOTHING)  # Field name made lowercase.
+    subtotal = models.FloatField(null=True, blank=True)
+    isv = models.FloatField(null=True, blank=True)
+    total = models.FloatField(null=True, blank=True)
     def __str__(self):
         return str(self.cliente)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Cotizaciones'
         verbose_name = 'Cotización'
         verbose_name_plural = 'Cotizaciones'
 
-class Parametro(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
-    valor = models.CharField(db_column='Valor', blank=True, null=True)  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'Parametros'
-        verbose_name = 'Parámetro'
-        verbose_name_plural = 'Parámetros'
-
-    def __str__(self):
-        return f"{self.nombre} = {self.valor}"
     
 class DetalleCotizaciones(models.Model):
     id = models.BigAutoField(primary_key=True)
-    id_cotizacion = models.ForeignKey(Cotizacione, models.DO_NOTHING, db_column='ID_Cotizacion')  # Field name made lowercase.
-    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
-    cantidad = models.BigIntegerField(db_column='Cantidad')  # Field name made lowercase.
-    precio_unitario = models.FloatField(db_column='Precio_Unitario')  # Field name made lowercase.
-    subtotal = models.FloatField(db_column='SubTotal')  # Field name made lowercase.
+    id_cotizacion = models.ForeignKey(Cotizacione, models.DO_NOTHING)  # Field name made lowercase.
+    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING)  # Field name made lowercase.
+    cantidad = models.BigIntegerField()  # Field name made lowercase.
+    precio_unitario = models.FloatField()  # Field name made lowercase.
+    subtotal = models.FloatField()  # Field name made lowercase.
 
     def __str__(self):
         return str(self.id_cotizacion)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Detalle_Cotizaciones'
         verbose_name = 'Detalle de Cotización'
         verbose_name_plural = 'Detalles de Cotizaciones'
@@ -119,11 +107,11 @@ class ListaCompra(models.Model):
  
 
     id = models.BigAutoField(primary_key=True)
-    fecha_solicitud = models.DateTimeField(db_column='Fecha_Solicitud', auto_now_add=True)  # Field name made lowercase.
-    fecha_entrega = models.DateTimeField(db_column='Fecha_Entrega', blank=True, null=True, verbose_name="Fecha Entrega Completa")  # Field name made lowercase. 
-    sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='sucursal', blank=True, null=True)
-    prioridad = models.CharField(db_column='Prioridad', choices=P_CHOICES, default=1)  # Field name made lowercase.
-    estado = models.CharField(db_column='Estado', choices=S_CHOICES, default=3)  # Field name made lowercase.
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)  # Field name made lowercase.
+    fecha_entrega = models.DateTimeField(blank=True, null=True, verbose_name="Fecha Entrega Completa")  # Field name made lowercase. 
+    sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, blank=True, null=True)
+    prioridad = models.CharField(choices=P_CHOICES, default=1)  # Field name made lowercase.
+    estado = models.CharField(choices=S_CHOICES, default=3)  # Field name made lowercase.
 
    
     def save(self, *args, **kwargs):
@@ -136,7 +124,7 @@ class ListaCompra(models.Model):
         super().save(*args, **kwargs)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Lista_Compras'
         verbose_name = 'Lista de Compra'
         verbose_name_plural = 'Listas de Compras'
@@ -158,58 +146,47 @@ class RequerimientoMateriale(models.Model):
         (SIN_STOCK, 'Sin Stock'),
     ]
     id = models.BigAutoField(primary_key=True)
-    material = models.ForeignKey(Materiale, models.DO_NOTHING, db_column='ID_Material')
-    proveedor= models.ForeignKey(Proveedore, models.DO_NOTHING, db_column='ID_Proveedor')
-    cantidad_necesaria = models.BigIntegerField(db_column='Cantidad_Necesaria')  # Field name made lowercase.
-    motivo = models.CharField(db_column='Motivo', choices=M_CHOICES, default=1)  # Field name made lowercase.
-    prioridad = models.CharField(db_column='Prioridad', choices=P_CHOICES, default=3)  # Field name made lowercase.
-    precio_actual = models.FloatField(db_column='precio')
-    subtotal = models.FloatField(db_column='subtotal')
-    id_lista = models.ForeignKey(ListaCompra, models.DO_NOTHING, db_column='ID_Lista')  # Field name made lowercase.
+    material = models.ForeignKey(Materiale, models.DO_NOTHING)
+    proveedor= models.ForeignKey(Proveedore, models.DO_NOTHING)
+    cantidad_necesaria = models.BigIntegerField()  # Field name made lowercase.
+    motivo = models.CharField(choices=M_CHOICES, default=1)  # Field name made lowercase.
+    prioridad = models.CharField(choices=P_CHOICES, default=3)  # Field name made lowercase.
+    precio_actual = models.FloatField()
+    subtotal = models.FloatField()
+    id_lista = models.ForeignKey(ListaCompra, models.DO_NOTHING)  # Field name made lowercase.
       # Field name made lowercase.
     
     def save(self, *args, **kwargs):
-        hoy = timezone.now().date()
-
-        # Intentar obtener la relación material-proveedor
+        """
+        - Garantiza que exista la relación MaterialProveedore.
+        - Si cambia el precio_actual, actualiza MaterialProveedore.precio_actual
+          y delega la gestión del HistorialPrecio al save() de MaterialProveedore.
+        - Actualiza el subtotal a partir de cantidad_necesaria * precio_actual.
+        """
+        # Crear o recuperar la relación material-proveedor
         rel, created = MaterialProveedore.objects.get_or_create(
             material=self.material,
             id_proveedor=self.proveedor,
-            defaults={'precio_actual': self.precio_actual}
+            defaults={
+                'precio_actual': self.precio_actual,
+                'tiempo': 1,  # valor razonable por defecto
+                'unidad_tiempo': MaterialProveedore.DIAS,
+            }
         )
 
-        precio_viejo = rel.precio_actual if not created else None
+        # Si el precio cambió, actualizar y dejar que MaterialProveedore.save maneje el historial
+        if rel.precio_actual != self.precio_actual:
+            rel.precio_actual = self.precio_actual
+            rel.save()  # Aquí se encarga de cerrar historial anterior y crear uno nuevo
 
-        if precio_viejo != self.precio_actual:
-            with transaction.atomic():
-                # Actualizar fecha_fin del historial anterior si existe
-                ultimo_historial = HistorialPrecio.objects.filter(
-                    material=self.material,
-                    proveedor=self.proveedor,
-                    fecha_fin__isnull=True
-                ).order_by('-fecha_inicio').first()
-
-                if ultimo_historial:
-                    ultimo_historial.fecha_fin = hoy
-                    ultimo_historial.save()
-
-                # Crear nuevo historial
-                HistorialPrecio.objects.create(
-                    precio=self.precio_actual,
-                    fecha_inicio=hoy,
-                    fecha_fin=None,
-                    material=self.material,
-                    proveedor=self.proveedor
-                )
-
-                # Actualizar precio en MaterialProveedore
-                rel.precio_actual = self.precio_actual
-                rel.save()
+        # Asegurar que el subtotal esté consistente
+        if self.cantidad_necesaria is not None and self.precio_actual is not None:
+            self.subtotal = float(self.cantidad_necesaria) * float(self.precio_actual)
 
         super().save(*args, **kwargs)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Requerimiento_Material'
         verbose_name = 'Requerimiento de Material'
         verbose_name_plural = 'Requerimientos de Materiales'
@@ -234,7 +211,7 @@ class DetalleRecibido(models.Model):
     estado_item = models.CharField(blank=True, null=True, choices=EI_CHOICES)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Detalle_recibido'
         verbose_name = 'Detalle Recibido'
         verbose_name_plural = 'Detalles Recibidos'
@@ -309,17 +286,17 @@ class DetalleRecibido(models.Model):
 
 class InventarioMateriale(models.Model):
     id = models.BigAutoField(primary_key=True)
-    id_material = models.ForeignKey(Materiale, models.DO_NOTHING, db_column='ID_Material')  # Field name made lowercase.
-    cantidad_disponible = models.BigIntegerField(db_column='Cantidad_Disponible')  # Field name made lowercase.
-    estado = models.ForeignKey(Estados, models.DO_NOTHING, db_column='Estado', blank=True, null=True)  # Field name made lowercase.
-    ubicación = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='ubicación', blank=True, null=True)
-    ultima_entrada = models.DateField(db_column='ultima entrada', blank=True, null=True)  # Field renamed to remove unsuitable characters.
-    ultima_salida = models.DateField(db_column='ultima salida', blank=True, null=True)  # Field renamed to remove unsuitable characters.
-    cantidad_reservada = models.BigIntegerField(db_column='Cantidad_Reservada', blank=True, null=True)  # Field name made lowercase.
+    id_material = models.ForeignKey(Materiale, models.DO_NOTHING)  # Field name made lowercase.
+    cantidad_disponible = models.BigIntegerField()  # Field name made lowercase.
+    estado = models.ForeignKey(Estados, models.DO_NOTHING, blank=True, null=True)  # Field name made lowercase.
+    ubicación = models.ForeignKey(Sucursale, models.DO_NOTHING, blank=True, null=True)
+    ultima_entrada = models.DateField(blank=True, null=True)  # Field renamed to remove unsuitable characters.
+    ultima_salida = models.DateField(blank=True, null=True)  # Field renamed to remove unsuitable characters.
+    cantidad_reservada = models.BigIntegerField(blank=True, null=True)  # Field name made lowercase.
     
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Inventario_Materiales'
         verbose_name = 'Inventario de Material'
         verbose_name_plural = 'Inventarios de Materiales'

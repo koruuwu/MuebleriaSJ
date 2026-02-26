@@ -3,7 +3,7 @@ from .models import *
 from django.template.loader import render_to_string
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
-from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMixin
+from proyecto.utils.admin_utils import  ExportReportMixin, PaginacionAdminMixin, UniqueFieldAdminMixin
 from datetime import timedelta
 from django.urls import path
 from django.http import HttpResponseRedirect, JsonResponse
@@ -49,12 +49,18 @@ class CotizacioneForm(ValidacionesBaseForm):
 
 
 @admin.register(InventarioMueble)
-class InventarioMuebleAdmin(PaginacionAdminMixin,admin.ModelAdmin):
+class InventarioMuebleAdmin(ExportReportMixin,PaginacionAdminMixin,admin.ModelAdmin):
     form = InventarioForm
     search_fields = ('id_mueble__nombre', 'ubicación__nombre')
     list_display = ("id_mueble","cantidad_disponible", "estado", "ubicación")
     readonly_fields=('ultima_entrada', 'ultima_salida')
     list_filter = ('estado','ubicación')
+
+    export_report_name = "Reporte de Inventario de muebles"
+    export_filename_base = "Inventario de Muebles"
+    
+    
+
     class Media:
         js = ("js/estados/estado_inventario_mueble.js",)
 
@@ -111,12 +117,17 @@ class InventarioMForm(ValidacionesBaseForm):
 
 
 @admin.register(InventarioMateriale)
-class InventarioMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class InventarioMaterialAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
     form = InventarioMForm
     list_display = ("id_material", "cantidad_disponible","cantidad_reservada", "estado", "ubicación", "stock_minimo_info")
     search_fields = ('id_material__nombre', 'ubicación__nombre')
     readonly_fields = ('ultima_entrada', 'ultima_salida')
     list_filter = ('estado', 'ubicación')
+
+    export_report_name = "Reporte de Materiales"
+    export_filename_base = "InventarioMateriales"
+    export_exclude_fields = ("stock_minimo_info",)
+    
     
     def stock_minimo_info(self, obj):
         return f"Mín: {obj.id_material.stock_minimo}"
@@ -197,7 +208,7 @@ class DetalleCotizacionesInline(admin.StackedInline):
     
 
 @admin.register(Cotizacione)
-class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
+class CotizacioneAdmin(ExportReportMixin, PaginacionAdminMixin,admin.ModelAdmin):
     form = CotizacioneForm
     list_display = ("cliente", "fecha_registro", "activo", "fecha_vencimiento", "convertir_a_orden")
     search_fields = ('cliente__nombre',)
@@ -205,6 +216,10 @@ class CotizacioneAdmin(PaginacionAdminMixin,admin.ModelAdmin):
     list_filter = ('activo',)
     change_form_template = "admin/cotizacion_change_form.html"
     inlines = [DetalleCotizacionesInline]
+
+    export_report_name = "Reporte de Cotizaciones"
+    export_filename_base = "Cotizaciones"
+    export_exclude_fields = ("convertir_a_orden",)
 
     
     def convertir_a_orden(self, obj):
@@ -772,12 +787,16 @@ class DetalleRecibCInline(admin.StackedInline):
         )
 
 @admin.register(ListaCompra)
-class ListaCompraAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class ListaCompraAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
     list_display = ("id", "fecha_solicitud","fecha_entrega", "prioridad", "estado")
     readonly_fields = ("fecha_solicitud","fecha_entrega",)
     list_filter = ('estado','prioridad',)
     inlines = [ListaCInline, DetalleRecibCInline]
     change_form_template = "admin/lista_compra_change_form.html"
+
+    export_report_name = "Reporte de Listas de compra"
+    export_filename_base = "Listas de Compra"
+    
 
     def get_readonly_fields(self, request, obj=None):
         # Si la orden está completa, todos los campos del admin son readonly

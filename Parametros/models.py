@@ -4,11 +4,11 @@ from django.db import models
 
 class Parametro(models.Model):
     id = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
-    valor = models.CharField(db_column='Valor', blank=True, null=True)  # Field name made lowercase.
+    nombre = models.CharField(blank=True, null=True)  # Field name made lowercase.
+    valor = models.CharField(blank=True, null=True)  # Field name made lowercase.
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Parametros'
         verbose_name = 'Parámetro'
         verbose_name_plural = 'Parámetros'

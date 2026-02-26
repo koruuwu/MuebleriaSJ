@@ -5,10 +5,10 @@ from django.core.exceptions import ValidationError
 class Cliente(models.Model):
     id = models.BigAutoField(primary_key=True)
     creado = models.DateTimeField(auto_now_add=True)
-    nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.
-    telefono = models.CharField(db_column='Telefono')  # Field name made lowercase.
-    direccion = models.CharField(db_column='Direccion')  # Field name made lowercase.
-    rtn = models.CharField(db_column='RTN', blank=True, null=True, max_length=16)  # Field name made lowercase.
+    nombre = models.CharField(max_length=100)  # Field name made lowercase.
+    telefono = models.CharField(max_length=15)  # Field name made lowercase.
+    direccion = models.CharField(max_length=255)  # Field name made lowercase.
+    rtn = models.CharField(blank=True, null=True, max_length=16)  # Field name made lowercase.
     
     def total_pedidos(self):
         return self.ordenesventa_set.count()
@@ -31,9 +31,9 @@ class Cliente(models.Model):
 
 class DocumentosCliente(models.Model):
     id = models.BigAutoField(primary_key=True)
-    id_cliente = models.ForeignKey(Cliente, models.DO_NOTHING, db_column='ID_Cliente')
-    id_documento = models.ForeignKey(Documento, models.DO_NOTHING, db_column='ID_Documento')
-    valor = models.CharField(db_column='Valor')
+    id_cliente = models.ForeignKey(Cliente, models.DO_NOTHING)
+    id_documento = models.ForeignKey(Documento, models.DO_NOTHING)
+    valor = models.CharField(max_length=100)  # Campo para almacenar el valor del documento (ejemplo: número de identificación)
 
     def __str__(self):
         # Mostrar "Cliente - Documento"

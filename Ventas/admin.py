@@ -17,7 +17,7 @@ from Sucursales.models import Cai
 from Compras.models import InventarioMueble
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
-from proyecto.utils.admin_utils import  PaginacionAdminMixin
+from proyecto.utils.admin_utils import  ExportReportMixin, PaginacionAdminMixin
 
 def obtener_cai_valido(sucursal):
     hoy = timezone.now().date()
@@ -353,10 +353,15 @@ class DetallesOInline(admin.StackedInline):
  
 
 @admin.register(OrdenesVenta)
-class OrdenesVentasAdmin(PaginacionAdminMixin,ValidacionInventarioMixin, admin.ModelAdmin):
+class OrdenesVentasAdmin(ExportReportMixin, PaginacionAdminMixin,ValidacionInventarioMixin, admin.ModelAdmin):
     form = OrdenForm
     inlines = [DetallesOInline]
     change_form_template = "admin/orden_venta_change_form.html"
+
+    export_report_name = "Reporte de Ventas"
+    export_filename_base = "Ventas"
+    
+
     def get_inline_instances(self, request, obj=None):
         """
         No devolver inlines si el objeto ya existe (edición).

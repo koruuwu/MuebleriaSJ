@@ -1,3 +1,5 @@
+import re
+
 from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -5,7 +7,17 @@ from .models import *
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
-from proyecto.utils.admin_utils import PaginacionAdminMixin
+from proyecto.utils.admin_utils import PaginacionAdminMixin, ExportReportMixin
+
+# PDF
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+# Excel
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.utils import get_column_letter
+
 
 class DocumentosClienteForm(forms.ModelForm):
     class Meta:
@@ -49,14 +61,15 @@ class ClienteForm(ValidacionesBaseForm):
         }
 
     def clean_rtn(self):
-        rtn = self.cleaned_data.get('rtn', '')
+        rtn = self.cleaned_data.get('rtn', '') or ''
 
-        if not rtn.isdigit():
-            raise forms.ValidationError("El RTN debe contener solo números.")
+        patron = r'^\d{4}-\d{4}-\d{6}$'
+        if not re.match(patron, rtn):
+            raise forms.ValidationError(
+                "El RTN debe tener el formato 0000-0000-000000 (solo números y guiones)."
+            )
 
-        if len(rtn) != 14:
-            raise forms.ValidationError("El RTN debe tener exactamente 14 dígitos.")
-
+        # Puedes retornar tal cual, o normalizar a solo dígitos si lo prefieres
         return rtn
     
         
@@ -70,13 +83,20 @@ class DocumentosClienteInline(admin.TabularInline):
 
 
 @admin.register(Cliente)
-class ClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class ClientesAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
     form = ClienteForm
     search_fields = ('nombre','telefono')
     list_display = ('nombre','telefono','direccion','total_pedidos')
     list_display_links = ('nombre',)
     list_filter = ()
     inlines = [DocumentosClienteInline]
+
+
+    export_report_name = "Reporte de Clientes"
+    export_filename_base = "clientes"
+    
+
+    
 
     def delete_model(self, request, obj):
         nombre = str(obj)

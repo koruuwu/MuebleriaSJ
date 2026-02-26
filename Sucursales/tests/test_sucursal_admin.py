@@ -9,7 +9,7 @@ class TestForms(SimpleTestCase):
             'nombre': 'Sucursal Principal',
             'direccion': 'Calle Principal #123',
             'telefono': '9555-1234',
-            'rtn': '08011999023999'
+            'rtn': '0801-1999-023999'
         }
         form = SucursaleForm(data=form_data)
         self.assertTrue(form.is_valid(), form.errors)

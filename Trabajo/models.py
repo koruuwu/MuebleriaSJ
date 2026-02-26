@@ -19,11 +19,11 @@ class OrdenMensuale(models.Model):
     
 
     id = models.BigAutoField(primary_key=True)
-    id_sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, db_column='id_sucursal', blank=False, null=False, verbose_name="sucursal")
-    nombre = models.CharField(db_column='Nombre', blank=False, null=False)  # Field name made lowercase.
-    fecha_creacion = models.DateTimeField(db_column='Fecha_creacion', auto_now_add=True )  # Field name made lowercase.
+    id_sucursal = models.ForeignKey(Sucursale, models.DO_NOTHING, blank=False, null=False, verbose_name="sucursal")
+    nombre = models.CharField(max_length=100, blank=False, null=False)  # Field name made lowercase.
+    fecha_creacion = models.DateTimeField( auto_now_add=True )  # Field name made lowercase.
     observaciones = models.CharField(blank=True, null=True)
-    fecha_fin = models.DateField(db_column='Fecha_fin', blank=False, null=False)  # Field name made lowercase.
+    fecha_fin = models.DateField(blank=False, null=False)  # Field name made lowercase.
     estado = models.CharField(blank=False, null=True, choices=EI_CHOICES, default=PEND) 
 
     def __str__(self):
@@ -48,7 +48,7 @@ class OrdenMensuale(models.Model):
         super().save(update_fields=['estado'])
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Orden_Mensuales'
         verbose_name = 'Orden Mensual'
         verbose_name_plural = 'Ordenes Mensuales'
@@ -70,8 +70,8 @@ class OrdenMensualDetalle(models.Model):
         (COMP, 'Completo'),
     ]
     id = models.BigAutoField(primary_key=True)
-    id_orden = models.ForeignKey('OrdenMensuale', models.DO_NOTHING, db_column='id_orden', blank=True, null=True)
-    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='id_mueble', blank=True, null=True)
+    id_orden = models.ForeignKey('OrdenMensuale', models.DO_NOTHING, blank=True, null=True)
+    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, blank=True, null=True)
     cantidad_planificada = models.BigIntegerField(blank=True, null=True)
     cantidad_producida = models.BigIntegerField(blank=True, null=True)
     estado = models.CharField(blank=False, null=False, choices=EU_CHOICES, default=1)
@@ -82,7 +82,7 @@ class OrdenMensualDetalle(models.Model):
 
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Orden_mensual_detalle'
         verbose_name = 'Detalle de Orden Mensual'
         verbose_name_plural = 'Detalles de Ordenes Mensuales'
@@ -99,15 +99,15 @@ class AportacionEmpleado(models.Model):
     ]
     
     id = models.BigAutoField(primary_key=True)
-    id_orden_detalle = models.ForeignKey('OrdenMensualDetalle', models.DO_NOTHING, db_column='id_orden_detalle', blank=True, null=True)
-    id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, db_column='id_empleado', blank=True, null=True) # Field name made lowercase.
+    id_orden_detalle = models.ForeignKey('OrdenMensualDetalle', models.DO_NOTHING, blank=True, null=True)
+    id_empleado = models.ForeignKey(PerfilUsuario, models.DO_NOTHING, blank=True, null=True) # Field name made lowercase.
     cant_aprobada = models.BigIntegerField(blank=True, null=True)
     cantidad_finalizada = models.BigIntegerField(blank=True, null=True)
     estado = models.CharField(blank=False, null=False, choices=EA_CHOICES, default=PEND)
     materiales_reservados = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'aportacion_empleado'
         verbose_name = 'Aportación de Empleado'
         verbose_name_plural = 'Aportaciones de Empleados'

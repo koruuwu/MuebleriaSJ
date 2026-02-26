@@ -5,8 +5,8 @@ from django.contrib.contenttypes.models import ContentType
 class Notificacione(models.Model):
     id = models.BigAutoField(primary_key=True)
     creado = models.DateTimeField()
-    mensaje = models.CharField(db_column='Mensaje')  # Field name made lowercase.
-    tipo = models.CharField(db_column='Tipo')  # Field name made lowercase.
+    mensaje = models.CharField()  # Field name made lowercase.
+    tipo = models.CharField()  # Field name made lowercase.
     leida = models.BooleanField()
     content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
     object_id = models.PositiveBigIntegerField(null=True, blank=True)

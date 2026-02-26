@@ -5,8 +5,8 @@ from django.utils import timezone
 from django.db import transaction
 class CategoriasMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.
-    descripcion = models.CharField(db_column='Descripcion')  # Field name made lowercase.
+    nombre = models.CharField(max_length=100)  # Field name made lowercase.
+    descripcion = models.CharField(max_length=255)  # Field name made lowercase.
     imagen = models.TextField()
     imagen_url = models.CharField(blank=True, null=True)
     
@@ -16,28 +16,28 @@ class CategoriasMueble(models.Model):
 
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Categorias_Muebles'
         verbose_name = 'Categoría de Mueble'
         verbose_name_plural = 'Categorías de Muebles'
 
 class Mueble(models.Model):
     id = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(db_column='Nombre')  # Field name made lowercase.
-    descripcion = models.TextField(db_column='Descripcion', max_length=250)  # Field name made lowercase.
-    precio_base = models.FloatField(db_column='Precio_Base')  # Field name made lowercase.
-    categoria = models.ForeignKey('CategoriasMueble', models.DO_NOTHING, db_column='ID_Categoria', blank=False, null=False)  # Field name made lowercase.
-    medida = models.ForeignKey(UnidadesMedida, models.DO_NOTHING, db_column='id_unidadesm', blank=False, null=False)
-    alto = models.FloatField(db_column='Alto', blank=False, null=False)  # Field name made lowercase.
-    ancho = models.FloatField(db_column='Ancho', blank=False, null=False)  # Field name made lowercase.
-    largo = models.FloatField(db_column='Largo', blank=False, null=False)  # Field name made lowercase.
+    nombre = models.CharField(max_length=100)  # Field name made lowercase.
+    descripcion = models.TextField(max_length=250)  # Field name made lowercase.
+    precio_base = models.FloatField()  # Field name made lowercase.
+    categoria = models.ForeignKey('CategoriasMueble', models.DO_NOTHING, blank=False, null=False)  # Field name made lowercase.
+    medida = models.ForeignKey(UnidadesMedida, models.DO_NOTHING, blank=False, null=False)
+    alto = models.FloatField( blank=False, null=False)  # Field name made lowercase.
+    ancho = models.FloatField( blank=False, null=False)  # Field name made lowercase.
+    largo = models.FloatField(blank=False, null=False)  # Field name made lowercase.
     imagen = models.TextField(blank=True, null=True)
     imagen_url = models.CharField(blank=True, null=True)
-    tamano = models.ForeignKey('Tamaño', models.DO_NOTHING, db_column='id_tamano', blank=False, null=False)
-    Descontinuado = models.BooleanField(db_column='Estado')  # Field name made lowercase.
+    tamano = models.ForeignKey('Tamaño', models.DO_NOTHING, blank=False, null=False)
+    Descontinuado = models.BooleanField()  # Field name made lowercase.
     archivo_temp = None
-    stock_minimo = models.BigIntegerField(db_column='Stock_Minimo')  # Field name made lowercase.
-    stock_maximo = models.BigIntegerField(db_column='Stock_Maximo') 
+    stock_minimo = models.BigIntegerField()  # Field name made lowercase.
+    stock_maximo = models.BigIntegerField() 
 
     def save(self, *args, **kwargs):
         hoy = timezone.now().date()
@@ -82,21 +82,21 @@ class Mueble(models.Model):
 
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Muebles'
         verbose_name = 'Mueble'
         verbose_name_plural = 'Muebles'
 
 class Tamaño(models.Model):
     id = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(db_column='Nombre', blank=True, null=True)  # Field name made lowercase.
-    descripcion = models.CharField(db_column='Descripcion', blank=True, null=True, max_length=50)  # Field name made lowercase.
+    nombre = models.CharField(blank=True, null=True)  # Field name made lowercase.
+    descripcion = models.CharField(blank=True, null=True, max_length=50)  # Field name made lowercase.
     def __str__(self):
         return self.nombre
 
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Tamano'
         verbose_name = 'Tamaño'
         verbose_name_plural = 'Tamaños'
@@ -104,16 +104,16 @@ class Tamaño(models.Model):
 
 class MuebleMateriale(models.Model):
     id = models.BigAutoField(primary_key=True)
-    id_material = models.ForeignKey(Materiale, models.DO_NOTHING, db_column='id_material', blank=False, null=False)
-    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='id_mueble', blank=False, null=False)
-    cantidad = models.BigIntegerField(db_column='Cantidad', blank=False, null=False)  # Field name made lowercase.
+    id_material = models.ForeignKey(Materiale, models.DO_NOTHING, blank=False, null=False)
+    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, blank=False, null=False)
+    cantidad = models.BigIntegerField(blank=False, null=False)  # Field name made lowercase.
     
     def __str__(self):
         # Mostrar "Cliente - Documento"
         return f"{self.id_material.nombre} - {self.id_mueble.nombre}: {self.cantidad}"
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Mueble_Material'
         verbose_name = 'Mueble Material'
         verbose_name_plural = 'Muebles Materiales'
@@ -122,13 +122,13 @@ class MuebleMateriale(models.Model):
 
 class HistorialPreciosMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
-    precio = models.FloatField(db_column='Precio')  # Field name made lowercase.
-    fecha_inicio = models.DateField(db_column='Fecha_Inicio')  # Field name made lowercase.
-    fecha_fin = models.DateField(db_column='Fecha_Fin', blank=True, null=True)  # Field name made lowercase.
-    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING, db_column='ID_Mueble')  # Field name made lowercase.
+    precio = models.FloatField()  # Field name made lowercase.
+    fecha_inicio = models.DateField()  # Field name made lowercase.
+    fecha_fin = models.DateField(blank=True, null=True)  # Field name made lowercase.
+    id_mueble = models.ForeignKey(Mueble, models.DO_NOTHING)  # Field name made lowercase.
     
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Historial_Precios_muebles'
         verbose_name = 'Historial de Precio de Mueble'
         verbose_name_plural = 'Historiales de Precios de Muebles'

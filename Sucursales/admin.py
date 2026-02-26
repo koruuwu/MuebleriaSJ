@@ -5,11 +5,12 @@ from .models import *
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import *
-from proyecto.utils.admin_utils import PaginacionAdminMixin
+from proyecto.utils.admin_utils import ExportReportMixin, PaginacionAdminMixin
 # Register your models here.
 from django.db import transaction
 from django.utils import timezone
 from django import forms
+import re
 
 
 
@@ -26,14 +27,15 @@ class SucursaleForm(ValidacionesBaseForm):
         }
 
     def clean_rtn(self):
-        rtn = self.cleaned_data.get('rtn', '')
+        rtn = self.cleaned_data.get('rtn', '') or ''
 
-        if not rtn.isdigit():
-            raise forms.ValidationError("El RTN debe contener solo números.")
+        patron = r'^\d{4}-\d{4}-\d{6}$'
+        if not re.match(patron, rtn):
+            raise forms.ValidationError(
+                "El RTN debe tener el formato 0000-0000-000000 (solo números y guiones)."
+            )
 
-        if len(rtn) != 14:
-            raise forms.ValidationError("El RTN debe tener exactamente 14 dígitos.")
-
+        # Puedes retornar tal cual, o normalizar a solo dígitos si lo prefieres
         return rtn
 
     def clean_nombre(self):
@@ -117,13 +119,17 @@ class CajaInline(admin.StackedInline):
 
 
 @admin.register(Sucursale)
-class SucursalesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class SucursalesAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = SucursaleForm
     search_fields = ('id', 'nombre', 'direccion', 'telefono')
     list_display = ('id', 'nombre', 'direccion', 'telefono', 'fecha_registro')
     list_display_links = ('id', 'nombre')
     readonly_fields = ('fecha_registro',)
     inlines=[CaiInline, CajaInline,]
+
+    export_report_name = "Reporte de Sucursales"
+    export_filename_base = "Sucursales"
+    
  
 
     def save_formset(self, request, form, formset, change):

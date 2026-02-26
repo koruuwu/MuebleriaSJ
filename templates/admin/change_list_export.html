@@ -1,0 +1,20 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+  <div style="display:inline-flex; gap: 8px; margin-right: 8px;">
+
+    <a href="{% url cl.opts|admin_urlname:'export_pdf' %}?{{ request.GET.urlencode }}"
+       class="button btn btn-info">
+      Exportar PDF
+    </a>
+
+    <a href="{% url cl.opts|admin_urlname:'export_excel' %}?{{ request.GET.urlencode }}"
+       class="button btn btn-info">
+      Exportar Excel
+    </a>
+
+  </div>
+
+  {{ block.super }}
+{% endblock %}

@@ -3,19 +3,19 @@ from django.db import models
 # Create your models here.
 class Sucursale(models.Model):
     id = models.BigAutoField(primary_key=True)
-    codigo_sucursal = models.CharField(db_column='codigo_sucursal', blank=False, null=False, max_length=10)  # Field name made lowercase.
+    codigo_sucursal = models.CharField( blank=False, null=False, max_length=10)  # Field name made lowercase.
     fecha_registro = models.DateTimeField(auto_now_add=True)
-    nombre = models.CharField(db_column='Nombre', blank=False, null=False, max_length=100)  # Field name made lowercase.
-    direccion = models.CharField(db_column='Direccion', max_length=255)  # Field name made lowercase.
-    telefono = models.CharField(db_column='Telefono', max_length=20)  # Field name made lowercase.
-    rtn = models.CharField(db_column='RTN', blank=True, null=True, max_length=20)  # Field name made lowercase.
+    nombre = models.CharField(blank=False, null=False, max_length=100)  # Field name made lowercase.
+    direccion = models.CharField(max_length=255)  # Field name made lowercase.
+    telefono = models.CharField(max_length=20)  # Field name made lowercase.
+    rtn = models.CharField(blank=True, null=True, max_length=20)  # Field name made lowercase.
 
 
     def __str__(self):
         return self.nombre
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'Sucursales'
         verbose_name = 'Sucursal'
         verbose_name_plural = 'Sucursales'
@@ -25,17 +25,17 @@ from django.utils import timezone
 
 class Cai(models.Model):
     id = models.BigAutoField(primary_key=True)
-    codigo_cai = models.CharField(db_column='Codigo_Cai', max_length=37)
-    fecha_emision = models.DateField(db_column='Fecha_Emision')
-    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento')
-    rango_inicial = models.CharField(db_column='Rango_Inicial', max_length=8)
-    rango_final = models.CharField(db_column='Rango_Final', max_length=8)
-    ultima_secuencia = models.CharField(db_column='Ultima_Secuencia')
-    activo = models.BooleanField(db_column='Activo')
-    sucursal = models.ForeignKey('Sucursale', models.DO_NOTHING, db_column='ID_Sucursal')
+    codigo_cai = models.CharField(max_length=37)
+    fecha_emision = models.DateField()
+    fecha_vencimiento = models.DateField()
+    rango_inicial = models.CharField(max_length=8)
+    rango_final = models.CharField(max_length=8)
+    ultima_secuencia = models.CharField(max_length=8)
+    activo = models.BooleanField()
+    sucursal = models.ForeignKey('Sucursale', models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'CAI'
         verbose_name = 'CAI'
         verbose_name_plural = 'CAIs'
@@ -71,7 +71,7 @@ class Caja(models.Model):
         return f"Caja {self.codigo_caja} - Sucursal: {self.sucursal.nombre}"
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'caja'
         verbose_name = 'Caja'
         verbose_name_plural = 'Cajas'

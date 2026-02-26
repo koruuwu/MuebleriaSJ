@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Parametro
-from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMixin
+from proyecto.utils.admin_utils import  ExportReportMixin, PaginacionAdminMixin, UniqueFieldAdminMixin
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
@@ -31,9 +31,13 @@ class ParametroForm(ValidacionesBaseForm, forms.ModelForm):
         return valor
 
 @admin.register(Parametro)
-class ParametroAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class ParametroAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = ParametroForm
     list_display= ("id", "nombre","valor")
+
+    export_report_name = "Reporte de Parámetros"
+    export_filename_base = "Parametros"
+    
 
 
     '''list_display = ("id", "fecha_solicitud","fecha_entrega", "prioridad", "estado")

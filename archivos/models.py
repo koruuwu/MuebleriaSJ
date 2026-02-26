@@ -5,9 +5,9 @@ from django.core.exceptions import ValidationError
 class Documento(models.Model):
     id = models.BigAutoField(primary_key=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
-    tipo_documento = models.CharField(db_column='Tipo_Documento', max_length=100)
+    tipo_documento = models.CharField(max_length=100)
 
-    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    descripcion = models.CharField( max_length=255)
 
     def clean(self):
         # Validar duplicado antes de guardar

@@ -6,7 +6,7 @@ from django.urls import reverse
 from .models import *
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
-from proyecto.utils.admin_utils import AdminConImagenMixin, PaginacionAdminMixin, UniqueFieldAdminMixin
+from proyecto.utils.admin_utils import AdminConImagenMixin, ExportReportMixin, PaginacionAdminMixin, UniqueFieldAdminMixin
 from Compras.models import HistorialPrecio
 from django.contrib import messages
 #------------FORMULARIOS ARRIBA-SOFIA CASTRO----------------
@@ -144,13 +144,17 @@ class CateForm(ValidacionesBaseForm):
 #----------------ADMINS---------------------
     
 @admin.register(Materiale)
-class MaterialeAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
+class MaterialeAdmin(ExportReportMixin,UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
     unique_fields = ['nombre']#Validador de valores repetidos
     form = MaterialeForm
     exclude = ('imagen','imagen_url',)
     list_display = ("nombre","categoria", "stock_minimo","stock_maximo", "vista_previa")
     list_filter = ('categoria','medida',)
     bucket_name="materiales"
+
+    export_report_name = "Reporte de Materiales"
+    export_filename_base = "Materiales"
+    export_exclude_fields = ("vista_previa",)
 
     def delete_model(self, request, obj):
         nombre = str(obj)
@@ -177,18 +181,25 @@ class MaterialeAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenM
 
 
 @admin.register(CategoriasMateriale)
-class CategoriasMaterialeAdmin(PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
+class CategoriasMaterialeAdmin(ExportReportMixin,PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
     form = CateForm
     list_display = ("nombre", "descripcion", "vista_previa")
     bucket_name="materiales_cat"
 
+    export_report_name = "Reporte de Categorías de Materiales"
+    export_filename_base = "Categorias_de_Materiales"
+    export_exclude_fields = ("vista_previa",)
+
 
 
 @admin.register(UnidadesMedida)
-class UnidadesMedidaAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin,admin.ModelAdmin):
+class UnidadesMedidaAdmin(ExportReportMixin,UniqueFieldAdminMixin,PaginacionAdminMixin,admin.ModelAdmin):
     form=MedForm
     unique_fields = ['nombre']
     list_display = ("nombre", "abreviatura")
+    export_report_name = "Reporte de Unidades de Medida"
+    export_filename_base = "Unidades_de_Medida"
+    
 
 class MaterialProveedorInline(admin.StackedInline):
     model = MaterialProveedore
@@ -225,7 +236,7 @@ class CalificacionInline(admin.StackedInline):
 
 
 @admin.register(Proveedore)
-class ProveedoreAdmin(PaginacionAdminMixin,admin.ModelAdmin):
+class ProveedoreAdmin(ExportReportMixin,PaginacionAdminMixin,admin.ModelAdmin):
     form= ProveForm
     list_display = ("compañia","nombre", "telefono", "estado")
     search_fields = ('nombre', 'compañia')
@@ -235,6 +246,10 @@ class ProveedoreAdmin(PaginacionAdminMixin,admin.ModelAdmin):
         ("Información General", {"fields": ("nombre", "telefono")}),
         ("Estado", {"fields": ("estado",)}),
     ]'''
+
+    export_report_name = "Reporte de Proveedores"
+    export_filename_base = "Proveedores"
+    
 
     def delete_model(self, request, obj):
         nombre = str(obj)

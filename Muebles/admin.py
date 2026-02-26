@@ -7,7 +7,7 @@ from django.contrib import messages
 from .models import *
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
-from proyecto.utils.admin_utils import AdminConImagenMixin, PaginacionAdminMixin, UniqueFieldAdminMixin
+from proyecto.utils.admin_utils import AdminConImagenMixin, PaginacionAdminMixin, UniqueFieldAdminMixin, ExportReportMixin
 # Register your models here.
 class ImagenForm(ValidacionesBaseForm):
     archivo_temp = forms.FileField(required=False, label="Subir imagen")
@@ -51,6 +51,8 @@ class MuebleForm(ValidacionesBaseForm):
             'stock_minimo':"Stock Mínimo",
             'stock_maximo':"Stock Máximo",
             }
+        
+        
     
     def clean_archivo_temp(self):
         archivo = self.cleaned_data.get('archivo_temp')
@@ -111,17 +113,25 @@ class MuebleMaterialeForm(forms.ModelForm):
 
 
 @admin.register(CategoriasMueble)
-class CategoriasMuebleAdmin(PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
+class CategoriasMuebleAdmin(ExportReportMixin,PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
     form = ImagenForm
     list_display = ("nombre", "descripcion", "vista_previa")
     bucket_name="muebles_cat"
 
+    export_report_name = "Reporte de Categorías de Muebles"
+    export_filename_base = "Categorias_de_Muebles"
+    export_exclude_fields = ("vista_previa",)
+
 
 
 @admin.register(Tamaño)
-class TamanoAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class TamanoAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form=TamañoForm
     list_display = ("nombre", "descripcion")
+
+    export_report_name = "Reporte de Tamaños"
+    export_filename_base = "Tamaños"
+    
 
     def delete_model(self, request, obj):
         nombre = str(obj)
@@ -149,6 +159,10 @@ class MuebleMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
     form = MuebleMaterialeForm
     list_display = ("id_mueble", "id_material", "cantidad")
 
+    export_report_name = "Reporte de Materiales de Muebles"
+    export_filename_base = "Materiales_de_Muebles"
+    
+
 class MuebleMaterialeInline(admin.TabularInline):
     model = MuebleMateriale
     extra = 0  # no muestres filas vacías adicionales 
@@ -157,7 +171,7 @@ class MuebleMaterialeInline(admin.TabularInline):
         return obj is not None  # Solo agregar si el cliente ya exist
     
 @admin.register(Mueble)
-class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixin, admin.ModelAdmin):
+class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixin, ExportReportMixin, admin.ModelAdmin):
     form = MuebleForm
     unique_fields = ['nombre']
     list_display = ("nombre", "descripcion","alto","ancho","largo","medida", "vista_previa")
@@ -172,3 +186,7 @@ class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixi
         ("Medidas", {"fields": ("medida","alto","ancho","largo","tamano")}),
         ("Stock", {"fields": ("stock_maximo","stock_minimo")}),
     ]
+
+    export_report_name = "Reporte de Muebles"
+    export_filename_base = "muebles"
+    export_exclude_fields = ("vista_previa",)

@@ -11,7 +11,7 @@ from Muebles.models import MuebleMateriale
 from django.db.models import Sum
 from Compras.models import InventarioMueble,Estados
 from django.utils import timezone
-from proyecto.utils.admin_utils import  PaginacionAdminMixin, UniqueFieldAdminMixin
+from proyecto.utils.admin_utils import  ExportReportMixin, PaginacionAdminMixin, UniqueFieldAdminMixin
 
 def calcular_estado_automatico(cantidad, material):
     stock_minimo = getattr(material, 'stock_minimo', 10)
@@ -234,12 +234,17 @@ class DetalleOrdenMInline(nested_admin.NestedStackedInline):
     
 
 @admin.register(OrdenMensuale)
-class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
+class OrdenMensualeAdmin(ExportReportMixin,nested_admin.NestedModelAdmin):
     readonly_fields= ('fecha_creacion',)
     list_filter = ('estado','id_sucursal',)
     list_display = ("id","estado","fecha_creacion","fecha_fin")
     
     inlines = [DetalleOrdenMInline]
+
+    export_report_name = "Reporte de Ordenes Mensuales"
+    export_filename_base = "Ordenes Mensuales"
+    
+
     def get_readonly_fields(self, request, obj=None):
         readonly = super().get_readonly_fields(request, obj)
         if obj and obj.estado == OrdenMensuale.COMP:
@@ -250,12 +255,16 @@ class OrdenMensualeAdmin(nested_admin.NestedModelAdmin):
 
 
 @admin.register(AportacionEmpleado)
-class AportacionAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class AportacionAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = AportacionForm
     list_display = ("id","get_orden","id_empleado","estado","cant_aprobada","cantidad_finalizada")
     readonly_fields= ('estado',)
     list_filter = ('estado',)
     # si tienes otros campos que quieres mostrar, agrégalos aquí
+
+    export_report_name = "Reporte de Aportaciones de Empleados"
+    export_filename_base = "Aportaciones Empleados"
+    
 
     class Media:
         js = ('js/filtros/filtro_orden_aportaciones.js','js/filtros/read_only_orden_aportaciones.js',)  # Archivo JS similar al de ListaCompra
