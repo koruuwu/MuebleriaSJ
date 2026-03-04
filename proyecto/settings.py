@@ -9,6 +9,9 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+EXCEPTION_LOG_DIR = Path(BASE_DIR) / "exception_logs"
+
+
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = 'django-insecure-rog-af+&wv-4hgeofrrhb7*(u^r5g03y78e367=mnf107r_8+='
 
@@ -100,6 +103,7 @@ JAZZMIN_SETTINGS = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "proyecto.utils.middleware.AdminExceptionLoggingMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',  # Este debe estar aquí
     'django.middleware.common.CommonMiddleware',

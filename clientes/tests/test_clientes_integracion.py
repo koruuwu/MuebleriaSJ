@@ -13,7 +13,7 @@ class ClienteCRUDTest(TestCase):
             'nombre': 'Juan Pérez',
             'telefono': '33332222',
             'direccion': 'Calle Falsa 123',
-            'rtn': '08011990123456',
+            'rtn': '0801-1990-123456',
         }
 
     def test_insertar_cliente(self):
@@ -25,21 +25,21 @@ class ClienteCRUDTest(TestCase):
         self.assertEqual(cliente.nombre, 'Juan Pérez')
         self.assertEqual(cliente.telefono, '33332222')
         self.assertEqual(cliente.direccion, 'Calle Falsa 123')
-        self.assertEqual(cliente.rtn, '08011990123456')
+        self.assertEqual(cliente.rtn, '0801-1990-123456')
 
     def test_editar_cliente(self):
         cliente = Cliente.objects.create(
             nombre='Juan Pérez Original',
             telefono='33332222',
             direccion='Calle Falsa 123',
-            rtn='08011990123456',
+            rtn='0801-1990-123456',
         )
 
         updated_data = {
             'nombre': 'Juan Pérez Editado',
             'telefono': '33332222',
             'direccion': 'Calle Mas Falsa 123',
-            'rtn': '08011990123456',
+            'rtn': '0801-1990-123456',
         }
 
         form = ClienteForm(data=updated_data, instance=cliente)
@@ -56,7 +56,7 @@ class ClienteCRUDTest(TestCase):
                 nombre='Juan Pérez',
                 telefono='33332222',
                 direccion='Calle Falsa 123',
-                rtn='08011990123456',
+                rtn='0801-1990-123456',
             )
 
             self.assertEqual(Cliente.objects.count(), 1)
@@ -71,7 +71,7 @@ class DocumentosClienteCRUDTest(TestCase):
             nombre='Juan Pérez',
             telefono='33332222',
             direccion='Calle Falsa 123',
-            rtn='08011990123456',
+            rtn='0801-1990-123456',
         )
 
         self.documento = Documento.objects.create(

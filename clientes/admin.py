@@ -7,6 +7,7 @@ from .models import *
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
+from proyecto.utils.admin_exception_mixin import ExceptionLoggingAdminMixin
 from proyecto.utils.admin_utils import PaginacionAdminMixin, ExportReportMixin
 
 # PDF
@@ -80,10 +81,12 @@ class DocumentosClienteInline(admin.TabularInline):
     can_delete = False  # No permite eliminar desde el inline
     def has_add_permission(self, request, obj=None):
         return obj is not None  # Solo agregar si el cliente ya existe
+    
+    
 
 
 @admin.register(Cliente)
-class ClientesAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+class ClientesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
     form = ClienteForm
     search_fields = ('nombre','telefono')
     list_display = ('nombre','telefono','direccion','total_pedidos')
@@ -94,40 +97,77 @@ class ClientesAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
 
     export_report_name = "Reporte de Clientes"
     export_filename_base = "clientes"
-    
 
-    
+    """
+    def col_prueba_error(self, obj):
+        raise Exception("ERROR CONTROLADO en list_display")
+    col_prueba_error.short_description = "Prueba"
+    """
+
+    def save_formset(self, request, form, formset, change):
+        print(">>> ClientesAdmin.save_formset ejecutado")
+        return super().save_formset(request, form, formset, change)
 
     def delete_model(self, request, obj):
         nombre = str(obj)
-        obj.delete()
-        self.message_user(request, f"El cliente '{nombre}' ha sido eliminado correctamente.", level=messages.SUCCESS)
+        
+
+        super().delete_model(request, obj)
+        self.message_user(
+            request,
+            f"El cliente '{nombre}' ha sido eliminado correctamente.",
+            level=messages.SUCCESS
+        )
 
     def delete_queryset(self, request, queryset):
         nombres = ', '.join([str(obj) for obj in queryset])
-        queryset.delete()
-        self.message_user(request, f'Clientes "{nombres}" fueron eliminados con éxito.', level=messages.SUCCESS)
+        
+        super().delete_queryset(request, queryset)
+        self.message_user(
+            request,
+            f'Clientes "{nombres}" fueron eliminados con éxito.',
+            level=messages.SUCCESS
+        )
 
 
     def delete_view(self, request, object_id, extra_context=None):
-        obj = self.get_object(request, object_id)
+        # Tu flujo custom también lo envolvemos con try/except manual aquí,
+        # porque estás controlando el POST + redirect.
+        try:
+            obj = self.get_object(request, object_id)
 
-        if request.method == 'POST' and obj:
-            self.delete_model(request, obj)
-            # Redirige a la lista de Clientes usando reverse
-            url = reverse('admin:clientes_cliente_changelist')
-            return HttpResponseRedirect(url)
+            if request.method == 'POST' and obj:
+                self.delete_model(request, obj)  # ya pasa por super().delete_model
+                url = reverse('admin:clientes_cliente_changelist')
+                return HttpResponseRedirect(url)
 
-        return super().delete_view(request, object_id, extra_context)
+            return super().delete_view(request, object_id, extra_context)
+        except Exception as exc:
+            # Si truena aquí, el mixin no necesariamente lo pesca, por eso lo capturamos.
+            from proyecto.utils.exception_logs import LogContext, write_exception_log
+            path = write_exception_log(LogContext(
+                modulo=self._modulo(),
+                request=request,
+                extra={"admin_hook": "delete_view", "model": self.model._meta.label, "object_id": object_id}
+            ), exc)
+            messages.error(request, f"Error eliminando. Se registró log: {path}")
+            raise
 
 
 
 @admin.register(DocumentosCliente)
-class DocumentosClientesAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class DocumentosClientesAdmin(ExceptionLoggingAdminMixin, ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = DocumentosClienteForm
     search_fields=('valor','id','id_cliente__nombre')#importante guion bajo para especificar que elemento de lleve foranea
     #solo en search fields y list filtrer
     list_display=('id_cliente', 'id_documento','valor')
     list_display_links=('valor',)
     list_filter=('id_documento','id_cliente')
+    
+    
+    
+    def save_model(self, request, obj, form, change):
+        if request.GET.get("force_error") == "1":
+            raise Exception("ERROR CONTROLADO - DocumentosCliente")
+        return super().save_model(request, obj, form, change)
     

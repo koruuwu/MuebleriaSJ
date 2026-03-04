@@ -2,8 +2,15 @@ from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
+from django.contrib import admin
+from django.contrib.auth.models import Group
 
-from proyecto.utils.admin_utils import ExportReportMixin
+from proyecto.utils.admin_utils import ExportReportMixin, PaginacionAdminMixin
+
+# Quitar admin original
+admin.site.unregister(Group)
+
+from proyecto.utils.admin_utils import ExportReportMixin, PaginacionAdminMixin
 from .models import PerfilUsuario
 from Sucursales.models import Sucursale, Caja
 from django.urls import path
@@ -108,6 +115,15 @@ class UsuarioChangeForm(UserChangeForm):
             )
 
         return username
+    
+@admin.register(Group)
+class GroupAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+    filter_horizontal = ("permissions",)   # ✅ cambia el selector
+
+    export_report_name = "Reporte de Grupos"
+    export_filename_base = "Grupos"
 
 class UsuarioAdmin(ExportReportMixin,UserAdmin):
     form = UsuarioChangeForm

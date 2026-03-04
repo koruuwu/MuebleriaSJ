@@ -1,0 +1,2 @@
+process_exception atrapo: OperationalError
+path=/admin/auth/group/1/change/

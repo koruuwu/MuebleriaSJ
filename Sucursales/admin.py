@@ -1,6 +1,8 @@
 from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+
+from proyecto.utils.admin_exception_mixin import ExceptionLoggingAdminMixin
 from .models import *
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
@@ -119,13 +121,14 @@ class CajaInline(admin.StackedInline):
 
 
 @admin.register(Sucursale)
-class SucursalesAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
+class SucursalesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = SucursaleForm
     search_fields = ('id', 'nombre', 'direccion', 'telefono')
     list_display = ('id', 'nombre', 'direccion', 'telefono', 'fecha_registro')
     list_display_links = ('id', 'nombre')
     readonly_fields = ('fecha_registro',)
     inlines=[CaiInline, CajaInline,]
+    
 
     export_report_name = "Reporte de Sucursales"
     export_filename_base = "Sucursales"
@@ -222,6 +225,7 @@ class SucursalesAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
 
     def delete_model(self, request, obj):
         nombre = str(obj)
+        
         obj.delete()
         self.message_user(request, f"La Sucursal '{nombre}' ha sido eliminada correctamente.", level=messages.SUCCESS)
 

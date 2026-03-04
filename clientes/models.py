@@ -6,7 +6,7 @@ class Cliente(models.Model):
     id = models.BigAutoField(primary_key=True)
     creado = models.DateTimeField(auto_now_add=True)
     nombre = models.CharField(max_length=100)  # Field name made lowercase.
-    telefono = models.CharField(max_length=15)  # Field name made lowercase.
+    telefono = models.CharField(max_length=15, verbose_name="Teléfono")  # Field name made lowercase.
     direccion = models.CharField(max_length=255)  # Field name made lowercase.
     rtn = models.CharField(blank=True, null=True, max_length=16)  # Field name made lowercase.
     
