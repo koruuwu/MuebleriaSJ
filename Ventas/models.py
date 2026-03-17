@@ -30,19 +30,17 @@ class OrdenesVenta(models.Model):
     def __str__(self):
         if self.id_factura:
             return self.id_factura
-        return f"Orden #{self.id} (Sin factura)"
-    
-    
-    
-    
-
-    
+        return f"Orden #{self.id} (Sin factura)"  
 
     class Meta:
         managed = True
         db_table = 'Ordenes_Ventas'
         verbose_name = 'Orden de Venta'
         verbose_name_plural = 'Ordenes de Ventas'
+        permissions = [
+            ("export_pdf_ordenesventa", "Puede exportar Órdenes de Venta a PDF"),
+            ("export_excel_ordenesventa", "Puede exportar Órdenes de Venta a Excel"),
+        ]
     
 
 class EstadoPagos(models.Model):
@@ -58,6 +56,10 @@ class EstadoPagos(models.Model):
         db_table = 'Estado_Pagos'
         verbose_name = 'Estado de Pago'
         verbose_name_plural = 'Estados de Pago'
+        permissions = [
+            ("export_pdf_estadopagos", "Puede exportar Estados de Pago a PDF"),
+            ("export_excel_estadopagos", "Puede exportar Estados de Pago a Excel"),
+        ]
 
 class MetodosPago(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -69,6 +71,10 @@ class MetodosPago(models.Model):
         db_table = 'Metodos_Pago'
         verbose_name = 'Método de Pago'
         verbose_name_plural = 'Métodos de Pago'
+        permissions = [
+            ("export_pdf_metodospago", "Puede exportar Métodos de Pago a PDF"),
+            ("export_excel_metodospago", "Puede exportar Métodos de Pago a Excel"),
+        ]
 
     def __str__(self):
         return self.tipo
@@ -88,3 +94,7 @@ class DetallesOrdene(models.Model):
         db_table = 'Detalles_Orden'
         verbose_name = 'Detalle de Orden'
         verbose_name_plural = 'Detalles de Ordenes'
+        permissions = [
+            ("export_pdf_detallesordene", "Puede exportar Detalles de Orden a PDF"),
+            ("export_excel_detallesordene", "Puede exportar Detalles de Orden a Excel"),
+        ]

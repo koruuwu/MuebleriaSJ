@@ -18,6 +18,20 @@ from django.contrib import admin
 from django.urls import path
 from django.shortcuts import redirect
 
+from django.contrib.admin import AdminSite
+
+
+"""
+class MyAdminSite(AdminSite):
+
+    def login(self, request, extra_context=None):
+        1/0
+        return super().login(request, extra_context)
+
+
+admin.site.__class__ = MyAdminSite
+"""
+
 def redirect_to_admin(request):
     return redirect('/admin/')
 

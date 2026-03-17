@@ -51,49 +51,83 @@ class LogContext:
 def write_exception_log(ctx: LogContext, exc: BaseException) -> str:
     stamp = _stamp()
     modulo = _safe_filename(ctx.modulo)
-    prefix = "Excepcion" 
-    filename = _safe_filename(f"{prefix}-{modulo}-{stamp}") + ".log"
+    filename = _safe_filename(f"Excepcion-{modulo}-{stamp}") + ".log"
+
     base_dir = Path(getattr(settings, "EXCEPTION_LOG_DIR", Path(settings.BASE_DIR) / "exception_logs"))
     base_dir.mkdir(parents=True, exist_ok=True)
-
     path = base_dir / filename
-    sensitive = ctx.sensitive_keys or DEFAULT_SENSITIVE_KEYS
 
-    lines: list[str] = []
-    lines.append(f"timestamp={stamp}")
-    lines.append(f"modulo={ctx.modulo}")
-    lines.append(f"exception_type={type(exc).__name__}")
-    lines.append(f"exception_message={str(exc)}")
-    lines.append("")
+    sensitive = ctx.sensitive_keys or DEFAULT_SENSITIVE_KEYS
+    fecha_legible = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     req = ctx.request
+    username = "No disponible"
+    ip = None
+    url = None
+    method = None
+    params = {}
+
     if req is not None:
         try:
-            user = getattr(req, "user", None)
-            lines.append(f"user={getattr(user, 'username', None) if user else None}")
-            lines.append(f"path={getattr(req, 'path', None)}")
-            lines.append(f"method={getattr(req, 'method', None)}")
-
-            post = getattr(req, "POST", None)
-            if post:
-                try:
-                    post_dict = dict(post.items())
-                except Exception:
-                    post_dict = {}
-                lines.append(f"post={_sanitize_mapping(post_dict, sensitive)}")
+            # MUY IMPORTANTE: no fuerces request.user si la BD está caída
+            raw_user = req.__dict__.get("user", None)
+            if raw_user is not None:
+                username = getattr(raw_user, "username", "No disponible")
         except Exception:
-            pass
-        lines.append("")
+            username = "No disponible"
+
+        try:
+            xff = req.META.get("HTTP_X_FORWARDED_FOR")
+            ip = xff.split(",")[0].strip() if xff else req.META.get("REMOTE_ADDR")
+        except Exception:
+            ip = "No disponible"
+
+        try:
+            url = getattr(req, "path", None)
+        except Exception:
+            url = "No disponible"
+
+        try:
+            method = getattr(req, "method", None)
+        except Exception:
+            method = "No disponible"
+
+        try:
+            if method == "POST":
+                params = dict(getattr(req, "POST", {}).items())
+            else:
+                params = dict(getattr(req, "GET", {}).items())
+        except Exception:
+            params = {}
+
+    params_safe = _sanitize_mapping(params, sensitive) if params else {}
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+
+    lines: list[str] = []
+    lines.append("ERROR REPORT")
+    lines.append("--------------------------------")
+    lines.append(f"Pantalla: {ctx.modulo}")
+    lines.append(f"Fecha: {fecha_legible}")
+    lines.append("")
+    lines.append(f"Usuario: {username}")
+    lines.append(f"IP: {ip}")
+    lines.append(f"URL: {url}")
+    lines.append(f"Metodo: {method}")
+    lines.append("")
+    lines.append("Parametros:")
+    lines.append(str(params_safe))
+    lines.append("")
 
     if ctx.extra:
         try:
-            lines.append(f"extra={_sanitize_mapping(ctx.extra, sensitive)}")
+            lines.append("Extra:")
+            lines.append(str(_sanitize_mapping(ctx.extra, sensitive)))
             lines.append("")
         except Exception:
             pass
 
-    lines.append("traceback:")
-    lines.append("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+    lines.append("Traceback:")
+    lines.append(tb)
 
     path.write_text("\n".join(lines), encoding="utf-8")
     return str(path)

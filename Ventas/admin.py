@@ -1082,14 +1082,43 @@ class OrdenesVentasAdmin(ExportReportMixin, PaginacionAdminMixin,ValidacionInven
 
     from reportlab.pdfgen.canvas import Canvas
 
+#Admin para reportes
 
+@admin.register(DetallesOrdene)
+class DetallesOrdeneAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "id_orden",
+        "id_mueble",
+        "precio_unitario",
+        "cantidad",
+        "subtotal",
+    )
+    search_fields = (
+        "id_orden__id_factura",
+        "id_mueble__nombre",
+        "id_orden__id_cliente__nombre",
+    )
+    list_filter = (
+        "id_orden",
+        "id_mueble",
+    )
 
+    export_report_name = "Reporte de Detalles de Ordenes de Venta"
+    export_filename_base = "Detalles_Ordenes_Venta"
 
-        
-    
+@admin.register(EstadoPagos)
+class EstadoPagosAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = ("id", "nombre", "descripcion")
+    search_fields = ("nombre", "descripcion")
 
-    
+    export_report_name = "Reporte de Estados de Pago"
+    export_filename_base = "Estados_Pago"
 
+@admin.register(MetodosPago)
+class MetodosPagoAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = ("id", "tipo", "descripcion")
+    search_fields = ("tipo", "descripcion")
 
-
-
+    export_report_name = "Reporte de Metodos de Pago"
+    export_filename_base = "Metodos_Pago"

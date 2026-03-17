@@ -24,6 +24,10 @@ class InventarioMueble(models.Model):
         db_table = 'Inventario_Muebles'
         verbose_name = 'Inventario de Mueble'
         verbose_name_plural = 'Inventarios de Muebles'
+        permissions = [
+            ("export_pdf_inventariomueble", "Puede exportar Inventario de Mueble a PDF"),
+            ("export_excel_inventariomueble", "Puede exportar Inventario de Mueble a Excel"),
+        ]
 
 class Estados(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -37,6 +41,10 @@ class Estados(models.Model):
         db_table = 'Estados_M'
         verbose_name = 'Estado de Mueble'
         verbose_name_plural = 'Estados de Muebles'
+        permissions = [
+            ("export_pdf_estados", "Puede exportar Estado de Mueble a PDF"),
+            ("export_excel_estados", "Puede exportar Estado de Mueble a Excel"),
+        ]
 
 
 class Cotizacione(models.Model):
@@ -56,6 +64,10 @@ class Cotizacione(models.Model):
         db_table = 'Cotizaciones'
         verbose_name = 'Cotización'
         verbose_name_plural = 'Cotizaciones'
+        permissions = [
+            ("export_pdf_cotizacione", "Puede exportar Cotización a PDF"),
+            ("export_excel_cotizacione", "Puede exportar Cotización a Excel"),
+        ]
 
     
 class DetalleCotizaciones(models.Model):
@@ -74,6 +86,10 @@ class DetalleCotizaciones(models.Model):
         db_table = 'Detalle_Cotizaciones'
         verbose_name = 'Detalle de Cotización'
         verbose_name_plural = 'Detalles de Cotizaciones'
+        permissions = [
+            ("export_pdf_detallecotizaciones", "Puede exportar Detalle de Cotización a PDF"),
+            ("export_excel_detallecotizaciones", "Puede exportar Detalle de Cotización a Excel"),
+        ]
 
 #-------------------COMPRAS----------------
 ALTA = 'alta'
@@ -128,6 +144,10 @@ class ListaCompra(models.Model):
         db_table = 'Lista_Compras'
         verbose_name = 'Lista de Compra'
         verbose_name_plural = 'Listas de Compras'
+        permissions = [
+            ("export_pdf_listacompra", "Puede exportar Lista de Compra a PDF"),
+            ("export_excel_listacompra", "Puede exportar Lista de Compra a Excel"),
+        ]
 
     def __str__(self):
         return f"Orden {self.id}"
@@ -190,6 +210,10 @@ class RequerimientoMateriale(models.Model):
         db_table = 'Requerimiento_Material'
         verbose_name = 'Requerimiento de Material'
         verbose_name_plural = 'Requerimientos de Materiales'
+        permissions = [
+            ("export_pdf_requerimientomateriale", "Puede exportar Requerimiento de Material a PDF"),
+            ("export_excel_requerimientomateriale", "Puede exportar Requerimiento de Material a Excel"),
+        ]
 
 class DetalleRecibido(models.Model):
     COMP = 'completo'
@@ -215,6 +239,10 @@ class DetalleRecibido(models.Model):
         db_table = 'Detalle_recibido'
         verbose_name = 'Detalle Recibido'
         verbose_name_plural = 'Detalles Recibidos'
+        permissions = [
+            ("export_pdf_detallerecibido", "Puede exportar Detalle Recibido a PDF"),
+            ("export_excel_detallerecibido", "Puede exportar Detalle Recibido a Excel"),
+        ]
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
@@ -300,5 +328,9 @@ class InventarioMateriale(models.Model):
         db_table = 'Inventario_Materiales'
         verbose_name = 'Inventario de Material'
         verbose_name_plural = 'Inventarios de Materiales'
+        permissions = [
+            ("export_pdf_inventariomateriale", "Puede exportar Inventario de Material a PDF"),
+            ("export_excel_inventariomateriale", "Puede exportar Inventario de Material a Excel"),
+        ]
 
         

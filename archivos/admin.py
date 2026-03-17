@@ -1,6 +1,5 @@
 from django.contrib import admin, messages
 
-from proyecto.utils.admin_exception_mixin import ExceptionLoggingAdminMixin
 from proyecto.utils.admin_utils import ExportReportMixin, PaginacionAdminMixin
 from .models import Documento
 from django import forms
@@ -19,12 +18,16 @@ class DocumentoForm(forms.ModelForm):
 
 
 @admin.register(Documento)
-class DocumentoAdmin(ExceptionLoggingAdminMixin, ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+class DocumentoAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
     form = DocumentoForm
     search_fields = ('id', 'tipo_documento')
     list_display = ('id', 'tipo_documento', 'descripcion')
     list_display_links = ('tipo_documento',)
     readonly_fields = ('fecha_registro',)
+
+    export_report_name = "Reporte de Documentos"
+    export_filename_base = "Documentos"
+    export_exclude_fields = ("vista_previa",)
 
     def save_model(self, request, obj, form, change):
         # Verifica duplicado antes de guardar

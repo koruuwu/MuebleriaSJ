@@ -1,14 +1,17 @@
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
+from .models import PerfilUsuario, UserProxy, GroupProxy
 from django.contrib import admin
-from django.contrib.auth.models import Group
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+from proyecto.utils.widgets import *
+
 
 from proyecto.utils.admin_utils import ExportReportMixin, PaginacionAdminMixin
 
-# Quitar admin original
-admin.site.unregister(Group)
+
 
 from proyecto.utils.admin_utils import ExportReportMixin, PaginacionAdminMixin
 from .models import PerfilUsuario
@@ -22,6 +25,27 @@ from proyecto.utils.validators import ValidacionesBaseForm
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Quitar admin original
+admin.site.unregister(Group)
+admin.site.unregister(User)
+
+class PerfilUsuarioForm(ValidacionesBaseForm):
+    class Meta:
+        model = PerfilUsuario
+        fields = "__all__"
+        widgets = {
+            # Si tus widgets personalizados no tienen uno específico para FK,
+            # puedes dejar estos como Select normal.
+            "user": forms.Select(attrs={"class": "form-control"}),
+            "sucursal": WidgetsEspeciales.nombreSucursal(),
+            "caja": WidgetsRegulares.codigos(),
+        }
+        labels = {
+            "user": "Usuario",
+            "sucursal": "Sucursal",
+            "caja": "Caja",
+        }
 
 class PerfilUsuarioInline(admin.StackedInline):
     model = PerfilUsuario
@@ -56,7 +80,7 @@ from django.contrib.auth.forms import UserCreationForm
 
 class UsuarioCreationForm(UserCreationForm, ValidacionesBaseForm):
     class Meta:
-        model = User
+        model = UserProxy
         fields = ("username", "password1", "password2")
 
     def clean_username(self):
@@ -89,7 +113,7 @@ class UsuarioCreationForm(UserCreationForm, ValidacionesBaseForm):
 
 class UsuarioChangeForm(UserChangeForm):
     class Meta:
-        model = User
+        model = UserProxy
         fields = "__all__"
 
     def clean_username(self):
@@ -116,19 +140,22 @@ class UsuarioChangeForm(UserChangeForm):
 
         return username
     
-@admin.register(Group)
+@admin.register(GroupProxy)
 class GroupAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
-    filter_horizontal = ("permissions",)   # ✅ cambia el selector
+    filter_horizontal = ("permissions",)
 
     export_report_name = "Reporte de Grupos"
     export_filename_base = "Grupos"
+    
 
 class UsuarioAdmin(ExportReportMixin,UserAdmin):
     form = UsuarioChangeForm
     add_form = UsuarioCreationForm
     inlines = [PerfilUsuarioInline]
+
+    
 
     
 
@@ -220,6 +247,51 @@ class UsuarioAdmin(ExportReportMixin,UserAdmin):
         super().save_model(request, obj, form, change)
 
 
+@admin.register(PerfilUsuario)
+class PerfilUsuarioAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    form = PerfilUsuarioForm
 
-admin.site.unregister(User)
-admin.site.register(User, UsuarioAdmin)
+    list_display = ("id", "user", "sucursal", "caja")
+    search_fields = (
+        "user__username",
+        "user__first_name",
+        "user__last_name",
+        "sucursal__nombre",
+        "caja__nombre",
+    )
+    list_filter = ("sucursal", "caja")
+
+    export_report_name = "Reporte de Perfiles de Usuario"
+    export_filename_base = "Perfiles_Usuario"
+
+    def delete_model(self, request, obj):
+        nombre = str(obj)
+        obj.delete()
+        self.message_user(
+            request,
+            f"El perfil de usuario '{nombre}' ha sido eliminado correctamente.",
+            level=messages.SUCCESS
+        )
+
+    def delete_queryset(self, request, queryset):
+        nombres = ', '.join([str(obj) for obj in queryset])
+        queryset.delete()
+        self.message_user(
+            request,
+            f'Los perfiles de usuario "{nombres}" fueron eliminados con éxito.',
+            level=messages.SUCCESS
+        )
+
+    def delete_view(self, request, object_id, extra_context=None):
+        obj = self.get_object(request, object_id)
+
+        if request.method == 'POST' and obj:
+            self.delete_model(request, obj)
+            url = reverse('admin:%s_%s_changelist' % (self.model._meta.app_label, self.model._meta.model_name))
+            return HttpResponseRedirect(url)
+
+        return super().delete_view(request, object_id, extra_context)
+
+
+
+admin.site.register(UserProxy, UsuarioAdmin)

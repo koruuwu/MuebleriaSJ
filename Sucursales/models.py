@@ -19,6 +19,10 @@ class Sucursale(models.Model):
         db_table = 'Sucursales'
         verbose_name = 'Sucursal'
         verbose_name_plural = 'Sucursales'
+        permissions = [
+            ("export_pdf_sucursale", "Puede exportar Sucursales a PDF"),
+            ("export_excel_sucursale", "Puede exportar Sucursales a Excel"),
+        ]
 
 
 from django.utils import timezone
@@ -39,6 +43,10 @@ class Cai(models.Model):
         db_table = 'CAI'
         verbose_name = 'CAI'
         verbose_name_plural = 'CAIs'
+        permissions = [
+            ("export_pdf_cai", "Puede exportar CAIs a PDF"),
+            ("export_excel_cai", "Puede exportar CAIs a Excel"),
+        ]
 
     def __str__(self):
         activo_str = "Activo" if self.activo else "Inactivo"
@@ -75,3 +83,7 @@ class Caja(models.Model):
         db_table = 'caja'
         verbose_name = 'Caja'
         verbose_name_plural = 'Cajas'
+        permissions = [
+            ("export_pdf_caja", "Puede exportar Cajas a PDF"),
+            ("export_excel_caja", "Puede exportar Cajas a Excel"),
+        ]

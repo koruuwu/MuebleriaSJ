@@ -87,6 +87,9 @@ JAZZMIN_SETTINGS = {
         "Sucursales.Sucursale":"fa-solid fa-store",
         "Ventas.OrdenesVenta":"fa-solid fa-dollar-sign",
         "Empleados.Empleado":"fa-solid fa-user-tie",
+        "Empleados.UserProxy":"fa-solid fa-user",
+        "Empleados.GroupProxy":"fa-solid fa-users",
+        "Empleados.PerfilUsuario":"fa-solid fa-id-card",
         "Notificaciones.Notificacione":"fa-solid fa-bell",
         "Compras.Cotizacione": "fa-solid fa-newspaper",
         "Compras.InventarioMateriale": "fa-solid fa-box-archive",
@@ -94,7 +97,22 @@ JAZZMIN_SETTINGS = {
         "Compras.ListaCompra":"fa-solid fa-rectangle-list",
         "Trabajo.OrdenMensuale":"fa-solid fa-calendar-day",
         "Trabajo.AportacionEmpleado":"fa-solid fa-briefcase",
-        "Parametros.Parametro":"fa-solid fa-file-invoice-dollar"
+        "Parametros.Parametro":"fa-solid fa-file-invoice-dollar",
+        "Sucursales.CAI":"fa-solid fa-file-invoice-dollar",
+        "Sucursales.Caja":"fa-solid fa-cash-register",
+        "Compras.DetalleRecibido":"fa-solid fa-clipboard-list",
+        "Compras.DetalleCotizaciones":"fa-solid fa-clipboard-list",
+        "Compras.RequerimientoMateriale":"fa-solid fa-clipboard-list",
+        "Compras.Estados":"fa-solid fa-clipboard-list",
+        "Materiales.MaterialProveedore":"fa-solid fa-handshake-simple",
+        "Materiales.HistorialPrecio":"bi bi-clock-history",
+        "Materiales.Calificacione":"fa-solid fa-star",
+        "Materiales.EstadosPersonas":"fa-solid fa-clipboard-list",
+        "Muebles.HistorialPreciosMueble":"bi bi-clock-history",
+        "Trabajo.OrdenMensualDetalle":"fa-solid fa-clipboard-list",
+        "Ventas.EstadoPagos":"fa-solid fa-clipboard-list",
+        "Ventas.MetodosPago":"bi bi-credit-card",
+        "Ventas.DetallesOrdene":"fa-solid fa-clipboard-list",
         
     }
     

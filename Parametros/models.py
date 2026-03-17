@@ -12,6 +12,10 @@ class Parametro(models.Model):
         db_table = 'Parametros'
         verbose_name = 'Parámetro'
         verbose_name_plural = 'Parámetros'
+        permissions = [
+            ("export_pdf_parametro", "Puede exportar Parámetros a PDF"),
+            ("export_excel_parametro", "Puede exportar Parámetros a Excel"),
+        ]
 
     def __str__(self):
         return f"{self.nombre} = {self.valor}"

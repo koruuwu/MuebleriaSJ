@@ -52,6 +52,10 @@ class OrdenMensuale(models.Model):
         db_table = 'Orden_Mensuales'
         verbose_name = 'Orden Mensual'
         verbose_name_plural = 'Ordenes Mensuales'
+        permissions = [
+            ("export_pdf_ordenmensuale", "Puede exportar Ordenes Mensuales a PDF"),
+            ("export_excel_ordenmensuale", "Puede exportar Ordenes Mensuales a Excel"),
+        ]
 
 
 
@@ -86,6 +90,10 @@ class OrdenMensualDetalle(models.Model):
         db_table = 'Orden_mensual_detalle'
         verbose_name = 'Detalle de Orden Mensual'
         verbose_name_plural = 'Detalles de Ordenes Mensuales'
+        permissions = [
+            ("export_pdf_ordenmensualdetalle", "Puede exportar Detalles de Ordenes Mensuales a PDF"),
+            ("export_excel_ordenmensualdetalle", "Puede exportar Detalles de Ordenes Mensuales a Excel"),
+        ]
 
 class AportacionEmpleado(models.Model):
     PEND = 'pendiente'
@@ -111,3 +119,7 @@ class AportacionEmpleado(models.Model):
         db_table = 'aportacion_empleado'
         verbose_name = 'Aportación de Empleado'
         verbose_name_plural = 'Aportaciones de Empleados'
+        permissions = [
+            ("export_pdf_aportacionempleado", "Puede exportar Aportaciones de Empleados a PDF"),
+            ("export_excel_aportacionempleado", "Puede exportar Aportaciones de Empleados a Excel"),
+        ]

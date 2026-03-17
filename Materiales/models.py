@@ -23,6 +23,10 @@ class Materiale(models.Model):
         db_table = 'Materiales'
         verbose_name = 'Material'
         verbose_name_plural = 'Materiales'
+        permissions = [
+            ("export_pdf_materiale", "Puede exportar Materiales a PDF"),
+            ("export_excel_materiale", "Puede exportar Materiales a Excel"),
+        ]
 
 class CategoriasMateriale(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -42,6 +46,10 @@ class CategoriasMateriale(models.Model):
         db_table = 'Categorias_Materiales'
         verbose_name = 'Categoría de Material'
         verbose_name_plural = 'Categorías de Materiales'
+        permissions = [
+            ("export_pdf_categoriasmateriale", "Puede exportar Categorías de Materiales a PDF"),
+            ("export_excel_categoriasmateriale", "Puede exportar Categorías de Materiales a Excel"),
+        ]
 
 
     
@@ -59,6 +67,10 @@ class UnidadesMedida(models.Model):
         db_table = 'Unidades_Medida'
         verbose_name = 'Unidad de Medida'
         verbose_name_plural = 'Unidades de Medida'
+        permissions = [
+            ("export_pdf_unidadesmedida", "Puede exportar Unidades de Medida a PDF"),
+            ("export_excel_unidadesmedida", "Puede exportar Unidades de Medida a Excel"),
+        ]
 
 
 class Proveedore(models.Model):
@@ -77,6 +89,10 @@ class Proveedore(models.Model):
         db_table = 'Proveedores'
         verbose_name = 'Proveedor'
         verbose_name_plural = 'Proveedores'
+        permissions = [
+            ("export_pdf_proveedore", "Puede exportar Proveedores a PDF"),
+            ("export_excel_proveedore", "Puede exportar Proveedores a Excel"),
+        ]
 
 
 class HistorialPrecio(models.Model):
@@ -92,6 +108,10 @@ class HistorialPrecio(models.Model):
         db_table = 'Historial_Precios'
         verbose_name = 'Historial de Precio'
         verbose_name_plural = 'Historiales de Precios'
+        permissions = [
+            ("export_pdf_historialprecio", "Puede exportar Historiales de Precios a PDF"),
+            ("export_excel_historialprecio", "Puede exportar Historiales de Precios a Excel"),
+        ]
 
 
 
@@ -135,6 +155,10 @@ class Calificacione(models.Model):
         db_table = 'Calificaciones'
         verbose_name = 'Calificación'
         verbose_name_plural = 'Calificaciones'
+        permissions = [
+            ("export_pdf_calificacione", "Puede exportar Calificaciones a PDF"),
+            ("export_excel_calificacione", "Puede exportar Calificaciones a Excel"),
+        ]
 
 
 class EstadosPersonas(models.Model):
@@ -149,6 +173,10 @@ class EstadosPersonas(models.Model):
         db_table = 'Estados_personas'
         verbose_name = 'Estado de Persona'
         verbose_name_plural = 'Estados de Personas'
+        permissions = [
+            ("export_pdf_estadospersonas", "Puede exportar Estados de Personas a PDF"),
+            ("export_excel_estadospersonas", "Puede exportar Estados de Personas a Excel"),
+        ]
 
 class MaterialProveedore(models.Model):
     DIAS = 'dias'
@@ -227,3 +255,7 @@ class MaterialProveedore(models.Model):
         db_table = 'Material_proveedor'
         verbose_name = 'Material Proveedor'
         verbose_name_plural = 'Materiales Proveedores'
+        permissions = [
+            ("export_pdf_materialproveedore", "Puede exportar Materiales Proveedores a PDF"),
+            ("export_excel_materialproveedore", "Puede exportar Materiales Proveedores a Excel"),
+        ]

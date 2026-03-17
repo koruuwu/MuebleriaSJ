@@ -25,6 +25,10 @@ class Cliente(models.Model):
         db_table = 'Clientes'
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
+        permissions = [
+            ("export_pdf_cliente", "Puede exportar Cliente a PDF"),
+            ("export_excel_cliente", "Puede exportar Cliente a Excel"),
+        ]
 
 
 
@@ -44,6 +48,10 @@ class DocumentosCliente(models.Model):
         db_table = 'Documentos_Clientes'
         verbose_name = 'Documento del Cliente'
         verbose_name_plural = 'Documentos de los Clientes'
+        permissions = [
+            ("export_pdf_documentoscliente", "Puede exportar Documentos de Cliente a PDF"),
+            ("export_excel_documentoscliente", "Puede exportar Documentos de Cliente a Excel"),
+        ]
 
     def clean(self):
         # Evita duplicados cliente + documento + valor

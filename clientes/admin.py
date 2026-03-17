@@ -7,7 +7,7 @@ from .models import *
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
 from proyecto.utils.widgets import WidgetsRegulares
-from proyecto.utils.admin_exception_mixin import ExceptionLoggingAdminMixin
+
 from proyecto.utils.admin_utils import PaginacionAdminMixin, ExportReportMixin
 
 # PDF
@@ -86,7 +86,7 @@ class DocumentosClienteInline(admin.TabularInline):
 
 
 @admin.register(Cliente)
-class ClientesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+class ClientesAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
     form = ClienteForm
     search_fields = ('nombre','telefono')
     list_display = ('nombre','telefono','direccion','total_pedidos')
@@ -98,11 +98,11 @@ class ClientesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin, PaginacionAdmi
     export_report_name = "Reporte de Clientes"
     export_filename_base = "clientes"
 
-    """
+    """Columna de prueba para simular un error"""
     def col_prueba_error(self, obj):
         raise Exception("ERROR CONTROLADO en list_display")
     col_prueba_error.short_description = "Prueba"
-    """
+    
 
     def save_formset(self, request, form, formset, change):
         print(">>> ClientesAdmin.save_formset ejecutado")
@@ -156,7 +156,7 @@ class ClientesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin, PaginacionAdmi
 
 
 @admin.register(DocumentosCliente)
-class DocumentosClientesAdmin(ExceptionLoggingAdminMixin, ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
+class DocumentosClientesAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = DocumentosClienteForm
     search_fields=('valor','id','id_cliente__nombre')#importante guion bajo para especificar que elemento de lleve foranea
     #solo en search fields y list filtrer

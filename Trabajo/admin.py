@@ -509,3 +509,27 @@ class AportacionAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
 
     
 
+@admin.register(OrdenMensualDetalle)
+class OrdenMensualDetalleAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "id_orden",
+        "id_mueble",
+        "cantidad_planificada",
+        "cantidad_producida",
+        "estado",
+        "entrega_estim",
+    )
+    search_fields = (
+        "id_orden__nombre",
+        "id_orden__id",
+        "id_mueble__nombre",
+    )
+    list_filter = (
+        "estado",
+        "entrega_estim",
+        "id_orden",
+    )
+
+    export_report_name = "Reporte de Detalles de Ordenes Mensuales"
+    export_filename_base = "Detalles_Ordenes_Mensuales"

@@ -2,7 +2,6 @@ from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
-from proyecto.utils.admin_exception_mixin import ExceptionLoggingAdminMixin
 from .models import *
 from django import forms
 from proyecto.utils.validators import ValidacionesBaseForm
@@ -121,7 +120,7 @@ class CajaInline(admin.StackedInline):
 
 
 @admin.register(Sucursale)
-class SucursalesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
+class SucursalesAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = SucursaleForm
     search_fields = ('id', 'nombre', 'direccion', 'telefono')
     list_display = ('id', 'nombre', 'direccion', 'telefono', 'fecha_registro')
@@ -244,6 +243,8 @@ class SucursalesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin,PaginacionAdm
             return HttpResponseRedirect(url)
 
         return super().delete_view(request, object_id, extra_context)
+    
+    
 
     def response_add(self, request, obj, post_url_continue=None):
         """
@@ -261,6 +262,37 @@ class SucursalesAdmin(ExceptionLoggingAdminMixin,ExportReportMixin,PaginacionAdm
         """
         return reverse(f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_{action}')
            
+@admin.register(Cai)
+class CaiAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    form = CAIMForm
+    list_display = (
+        "id",
+        "codigo_cai",
+        "sucursal",
+        "fecha_emision",
+        "fecha_vencimiento",
+        "rango_inicial",
+        "rango_final",
+        "ultima_secuencia",
+        "activo",
+    )
+    search_fields = ("codigo_cai", "sucursal__nombre")
+    list_filter = ("activo", "fecha_emision", "fecha_vencimiento", "sucursal")
+    readonly_fields = ()
+    export_report_name = "Reporte de CAIs"
+    export_filename_base = "CAIs"
 
+    export_exclude_fields = ()
+
+@admin.register(Caja)
+class CajaAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    form = CajaForm
+    list_display = ("id", "codigo_caja", "sucursal", "estado")
+    search_fields = ("codigo_caja", "sucursal__nombre")
+    list_filter = ("estado", "sucursal")
+    export_report_name = "Reporte de Cajas"
+    export_filename_base = "Cajas"
+
+    export_exclude_fields = ()
 
             

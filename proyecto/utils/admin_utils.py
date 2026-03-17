@@ -5,6 +5,10 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 
+from django.contrib import messages
+from django.http import HttpResponseRedirect
+from proyecto.utils.exception_logs import LogContext, write_exception_log
+
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 import os
@@ -51,6 +55,40 @@ class ExportReportMixin:
     export_logo_url = "https://ckjwqojoaxxbttkfgtpt.supabase.co/storage/v1/object/public/logo/SanJoseLogo.png"         # puedes setearlo en settings o en cada admin
     export_logo_bucket_path = None # opcional si quieres construir URL desde supabase
     export_logo_height_cm = 1.8
+
+    # =========================
+    # PERMISOS DE EXPORTACIÓN
+    # =========================
+    def get_export_pdf_permission_codename(self):
+        return f"export_pdf_{self.model._meta.model_name}"
+
+    def get_export_excel_permission_codename(self):
+        return f"export_excel_{self.model._meta.model_name}"
+
+    def get_export_pdf_permission_full(self):
+        return f"{self.model._meta.app_label}.{self.get_export_pdf_permission_codename()}"
+
+    def get_export_excel_permission_full(self):
+        return f"{self.model._meta.app_label}.{self.get_export_excel_permission_codename()}"
+
+    def has_export_pdf_permission(self, request):
+        return request.user.has_perm(self.get_export_pdf_permission_full())
+
+    def has_export_excel_permission(self, request):
+        return request.user.has_perm(self.get_export_excel_permission_full())
+
+    def _redirect_no_export_permission(self, request, tipo_reporte):
+        messages.error(
+            request,
+            f"No tienes permiso para exportar este reporte en formato {tipo_reporte}."
+        )
+        return HttpResponseRedirect(request.META.get("HTTP_REFERER", ".."))
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["can_export_pdf"] = self.has_export_pdf_permission(request)
+        extra_context["can_export_excel"] = self.has_export_excel_permission(request)
+        return super().changelist_view(request, extra_context=extra_context)
 
     def _get_logo_url(self):
         """
@@ -284,426 +322,483 @@ class ExportReportMixin:
 
         
     def export_pdf(self, request):
-        qs = self._get_changelist_queryset(request)
+        if not self.has_export_pdf_permission(request):
+            return self._redirect_no_export_permission(request, "PDF")
 
-        
+        try:
+            qs = self._get_changelist_queryset(request)
 
-        response = HttpResponse(content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{self.export_filename_base}.pdf"'
+            
 
-        c = canvas.Canvas(response, pagesize=letter)
-        page_width, page_height = letter
+            response = HttpResponse(content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{self.export_filename_base}.pdf"'
 
-        empresa = "Mueblería San José"
-        reporte = getattr(self, "export_report_name", "Reporte")
-        usuario = request.user.get_username()
-        ahora = timezone.localtime()
-        logo_path = self._get_logo_local_path()
+            c = canvas.Canvas(response, pagesize=letter)
+            page_width, page_height = letter
 
-        # Márgenes y layout
-        left_margin = 40
-        right_margin = 40
-        bottom_margin = 60
-        table_header_height = 15
-        top_header_y = page_height - 50
-        table_top_y = page_height - 110
-        bottom_limit_y = bottom_margin + 20
-        line_height = 14
+            empresa = "Mueblería San José"
+            reporte = getattr(self, "export_report_name", "Reporte")
+            usuario = request.user.get_username()
+            ahora = timezone.localtime()
+            logo_path = self._get_logo_local_path()
 
-        total_width = page_width - left_margin - right_margin
+            # Márgenes y layout
+            left_margin = 40
+            right_margin = 40
+            bottom_margin = 60
+            
+            top_header_y = page_height - 50
+            table_top_y = page_height - 110
+            bottom_limit_y = bottom_margin + 20
+            line_height = 14
 
-        # ----- Columnas -----
-        columns = self._get_export_columns()
-        headers = self.get_export_headers(request, columns)
-        num_cols = len(columns)
+            total_width = page_width - left_margin - right_margin
 
-        if self.export_pdf_column_widths and len(self.export_pdf_column_widths) == num_cols:
-            col_widths = self.export_pdf_column_widths
-        else:
-            col_width = total_width / max(num_cols, 1)
-            col_widths = [col_width] * num_cols
+            # ----- Columnas -----
+            columns = self._get_export_columns()
+            headers = self.get_export_headers(request, columns)
+            num_cols = len(columns)
 
-        col_x = [left_margin]
-        for w_col in col_widths[:-1]:
-            col_x.append(col_x[-1] + w_col)
+            if self.export_pdf_column_widths and len(self.export_pdf_column_widths) == num_cols:
+                col_widths = self.export_pdf_column_widths
+            else:
+                col_width = total_width / max(num_cols, 1)
+                col_widths = [col_width] * num_cols
 
-        # ----- Encabezado y pie -----
-        def header():
-            text_x = left_margin
+            col_x = [left_margin]
+            for w_col in col_widths[:-1]:
+                col_x.append(col_x[-1] + w_col)
 
-            # Texto primero (lado izquierdo)
-            c.setFont("Helvetica-Bold", 14)
-            c.drawString(text_x, top_header_y, empresa)
-
-            c.setFont("Helvetica", 12)
-            c.drawString(text_x, top_header_y - 20, reporte)
-
-            # Logo a la derecha
-            if logo_path:
-                try:
-                    img = ImageReader(logo_path)
-                    logo_h = self.export_logo_height_cm * cm
-                    logo_w = logo_h  # cuadrado, ajusta proporción
-
-                    logo_x = page_width - right_margin - logo_w
-                    logo_y = top_header_y - logo_h + 5
-
-                    c.drawImage(
-                        img,
-                        logo_x,
-                        logo_y,
-                        width=logo_w,
-                        height=logo_h,
-                        preserveAspectRatio=True,
-                        mask="auto",
-                    )
-                except Exception:
-                    pass
-
-            # Línea divisoria
-            c.line(left_margin, table_top_y - 5, page_width - right_margin, table_top_y - 5)
-
-        def footer(page_num, total_pages):
-            c.line(left_margin, 60, page_width - right_margin, 60)
-            c.setFont("Helvetica", 9)
-
-            texto_pagina = f"Página {page_num} de {total_pages or 1}"
-            texto_fecha = f"Fecha y hora: {ahora.strftime('%Y-%m-%d %H:%M:%S')}"
-            texto_usuario = f"Usuario: {usuario}"
-
-            c.drawString(left_margin, 45, texto_usuario)                  # izquierda
-            c.drawCentredString(page_width / 2, 45, texto_pagina)         # centro ✅
-            c.drawRightString(page_width - right_margin, 45, texto_fecha) # derecha
-
-        # Y de inicio de datos (parte superior de la primera fila)
-        data_top_y = table_top_y - table_header_height
-
-        # ---------- 1) SIMULACIÓN para saber cuántas páginas habrá ----------
-        page_count = 1
-        y_sim = data_top_y
-
-        for obj in qs:
-            max_lines = 1
-            for idx, field_name in enumerate(columns):
-                value = self._export_get_value(obj, field_name)
+            # ----- Wrap de encabezados y altura dinámica del header -----
+            header_lines_per_col = []
+            for idx, titulo in enumerate(headers):
                 lines = self._wrap_text(
-                    value,
+                    str(titulo),
                     max_width=col_widths[idx] - 4,
-                    font_name="Helvetica",
+                    font_name="Helvetica-Bold",
                     font_size=10,
                 )
-                max_lines = max(max_lines, len(lines))
+                header_lines_per_col.append(lines)
 
-            row_height = max_lines * line_height
-            if y_sim - row_height < bottom_limit_y:
-                page_count += 1
-                y_sim = data_top_y
+            max_header_lines = max((len(lines) for lines in header_lines_per_col), default=1)
+            table_header_height = max_header_lines * line_height
 
-            y_sim -= row_height
+            # Inicio real de datos debajo del encabezado
+            header_bottom_y = table_top_y - table_header_height - 2
+            data_top_y = header_bottom_y - 8
 
-        total_pages = max(page_count, 1)
+            # ----- Encabezado y pie -----
+            def header():
+                text_x = left_margin
 
-        # ---------- 2) DIBUJO real ----------
-        page_num = 1
-        header()
+                # Texto primero (lado izquierdo)
+                c.setFont("Helvetica-Bold", 14)
+                c.drawString(text_x, top_header_y, empresa)
 
-        # Encabezado de columnas
-        c.setFont("Helvetica-Bold", 10)
-        header_y = table_top_y
-        headers = self.get_export_headers(request, columns)
+                c.setFont("Helvetica", 12)
+                c.drawString(text_x, top_header_y - 20, reporte)
 
-        for i, titulo in enumerate(headers):
-            c.drawString(col_x[i], header_y, str(titulo))
-        c.setFont("Helvetica", 10)
+                # Logo a la derecha
+                if logo_path:
+                    try:
+                        img = ImageReader(logo_path)
+                        logo_h = self.export_logo_height_cm * cm
+                        logo_w = logo_h  # cuadrado, ajusta proporción
 
-        y = data_top_y  # parte superior de la primera fila
-        row_index = 0   # para zebra
+                        logo_x = page_width - right_margin - logo_w
+                        logo_y = top_header_y - logo_h + 5
 
-        for obj in qs:
-            # Valores de la fila según columnas
-            values = self.get_export_row(obj, columns)
-
-            # Envolver texto por columna
-            col_lines = []
-            max_lines_in_row = 1
-            for value, max_w in zip(values, col_widths):
-                text = "" if value is None else str(value)
-                lines = self._wrap_text(text, max_w - 4)
-                if not lines:
-                    lines = [""]
-                col_lines.append(lines)
-                max_lines_in_row = max(max_lines_in_row, len(lines))
-
-            row_height = max_lines_in_row * line_height
-
-            # ¿Cabe la fila completa? Si no, salto de página
-            if y - row_height < bottom_limit_y:
-                footer(page_num, total_pages)
-                c.showPage()
-                page_num += 1
-                header()
-
-                # reimprimir encabezado de columnas en la nueva página
-                c.setFont("Helvetica-Bold", 10)
-                header_y = table_top_y
-                for i, col in enumerate(columns):
-                    titulo = col.replace("_", " ").title()
-                    c.drawString(col_x[i], header_y, titulo)
-                c.setFont("Helvetica", 10)
-
-                y = data_top_y  # reset parte superior de filas
-
-            row_top = y
-            row_bottom = y - row_height
-
-            # Fondo “zebra” para la fila completa
-            if row_index % 2 == 0:
-                c.setFillColor(colors.whitesmoke)
-                c.rect(
-                    left_margin,
-                    row_bottom,
-                    total_width,
-                    row_height,
-                    stroke=0,
-                    fill=1,
-                )
-                c.setFillColor(colors.black)
-
-            # Texto de la fila, línea por línea
-            for line_idx in range(max_lines_in_row):
-                text_y = row_top - (line_idx + 1) * line_height + 3  # +3 = pequeño padding
-                for col_idx, lines in enumerate(col_lines):
-                    if line_idx < len(lines):
-                        c.drawString(
-                            col_x[col_idx],
-                            text_y,
-                            lines[line_idx],
+                        c.drawImage(
+                            img,
+                            logo_x,
+                            logo_y,
+                            width=logo_w,
+                            height=logo_h,
+                            preserveAspectRatio=True,
+                            mask="auto",
                         )
+                    except Exception:
+                        pass
 
-            y = row_bottom
-            row_index += 1
+                # Línea divisoria debajo de todo el encabezado de columnas
+                header_bottom_y = table_top_y - table_header_height - 2
+                c.line(left_margin, header_bottom_y, page_width - right_margin, header_bottom_y)
 
-        footer(page_num, total_pages)
-        c.save()
-        return response
+            def footer(page_num, total_pages):
+                c.line(left_margin, 60, page_width - right_margin, 60)
+                c.setFont("Helvetica", 9)
+
+                texto_pagina = f"Página {page_num} de {total_pages or 1}"
+                texto_fecha = f"Fecha y hora: {ahora.strftime('%Y-%m-%d %H:%M:%S')}"
+                texto_usuario = f"Usuario: {usuario}"
+
+                c.drawString(left_margin, 45, texto_usuario)                  # izquierda
+                c.drawCentredString(page_width / 2, 45, texto_pagina)         # centro ✅
+                c.drawRightString(page_width - right_margin, 45, texto_fecha) # derecha
+
+            # Y de inicio de datos (parte superior de la primera fila)
+            
+
+            # ---------- 1) SIMULACIÓN para saber cuántas páginas habrá ----------
+            page_count = 1
+            y_sim = data_top_y
+
+            for obj in qs:
+                max_lines = 1
+                for idx, field_name in enumerate(columns):
+                    value = self._export_get_value(obj, field_name)
+                    lines = self._wrap_text(
+                        value,
+                        max_width=col_widths[idx] - 4,
+                        font_name="Helvetica",
+                        font_size=10,
+                    )
+                    max_lines = max(max_lines, len(lines))
+
+                row_height = max_lines * line_height
+                if y_sim - row_height < bottom_limit_y:
+                    page_count += 1
+                    y_sim = data_top_y
+
+                y_sim -= row_height
+
+            total_pages = max(page_count, 1)
+
+            # ---------- 2) DIBUJO real ----------
+            page_num = 1
+            header()
+
+            # Encabezado de columnas
+            c.setFont("Helvetica-Bold", 10)
+            header_y = table_top_y
+
+            for i, lines in enumerate(header_lines_per_col):
+                for line_idx, line in enumerate(lines):
+                    c.drawString(
+                        col_x[i],
+                        header_y - (line_idx * line_height),
+                        line,
+                    )
+
+            c.setFont("Helvetica", 10)
+
+            y = data_top_y  # parte superior de la primera fila
+            row_index = 0   # para zebra
+
+            for obj in qs:
+                # Valores de la fila según columnas
+                values = self.get_export_row(obj, columns)
+
+                # Envolver texto por columna
+                col_lines = []
+                max_lines_in_row = 1
+                for value, max_w in zip(values, col_widths):
+                    text = "" if value is None else str(value)
+                    lines = self._wrap_text(text, max_w - 4)
+                    if not lines:
+                        lines = [""]
+                    col_lines.append(lines)
+                    max_lines_in_row = max(max_lines_in_row, len(lines))
+
+                row_height = max_lines_in_row * line_height
+
+                # ¿Cabe la fila completa? Si no, salto de página
+                if y - row_height < bottom_limit_y:
+                    footer(page_num, total_pages)
+                    c.showPage()
+                    page_num += 1
+                    header()
+
+                    # reimprimir encabezado de columnas en la nueva página
+                    c.setFont("Helvetica-Bold", 10)
+                    header_y = table_top_y
+
+                    for i, lines in enumerate(header_lines_per_col):
+                        for line_idx, line in enumerate(lines):
+                            c.drawString(
+                                col_x[i],
+                                header_y - (line_idx * line_height),
+                                line,
+                            )
+
+                    c.setFont("Helvetica", 10)
+                    y = data_top_y  # reset parte superior de filas
+
+                row_top = y
+                row_bottom = y - row_height
+
+                # Fondo “zebra” para la fila completa
+                if row_index % 2 == 0:
+                    c.setFillColor(colors.whitesmoke)
+                    c.rect(
+                        left_margin,
+                        row_bottom,
+                        total_width,
+                        row_height,
+                        stroke=0,
+                        fill=1,
+                    )
+                    c.setFillColor(colors.black)
+
+                # Texto de la fila, línea por línea
+                for line_idx in range(max_lines_in_row):
+                    text_y = row_top - (line_idx + 1) * line_height + 3  # +3 = pequeño padding
+                    for col_idx, lines in enumerate(col_lines):
+                        if line_idx < len(lines):
+                            c.drawString(
+                                col_x[col_idx],
+                                text_y,
+                                lines[line_idx],
+                            )
+
+                y = row_bottom
+                row_index += 1
+
+            footer(page_num, total_pages)
+            c.save()
+            return response
+        except Exception as exc:
+            write_exception_log(
+                LogContext(
+                    modulo=self.model._meta.app_label,
+                    request=request,
+                ),
+                exc
+            )
+            messages.error(request, "Ocurrió un error al exportar el PDF.")
+            return HttpResponseRedirect(request.META.get("HTTP_REFERER", ".."))
 
     # ---------- Export Excel ----------
 
     def export_excel(self, request):
-        qs = self._get_changelist_queryset(request)
-        columns = self._get_export_columns()
-        headers = self.get_export_headers(request, columns)
+        if not self.has_export_excel_permission(request):
+            return self._redirect_no_export_permission(request, "Excel")
 
-        wb = Workbook()
-        ws = wb.active
-        ws.title = str(self.export_report_name)[:31]
+        try:
+            qs = self._get_changelist_queryset(request)
+            columns = self._get_export_columns()
+            headers = self.get_export_headers(request, columns)
 
-        empresa = getattr(self, "export_company_name", "Mueblería San José")
-        reporte = getattr(self, "export_report_name", "Reporte")
-        usuario = request.user.get_username()
-        ahora = timezone.localtime().strftime("%Y-%m-%d %H:%M:%S")
+            wb = Workbook()
+            ws = wb.active
+            ws.title = str(self.export_report_name)[:31]
 
-        # ---------- Estilos ----------
-        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-        from openpyxl.drawing.image import Image as XLImage
+            empresa = getattr(self, "export_company_name", "Mueblería San José")
+            reporte = getattr(self, "export_report_name", "Reporte")
+            usuario = request.user.get_username()
+            ahora = timezone.localtime().strftime("%Y-%m-%d %H:%M:%S")
 
-        bold_16 = Font(bold=True, size=16)
-        bold_12 = Font(bold=True, size=12)
-        bold_11 = Font(bold=True, size=11)
-        normal_10 = Font(size=10)
+            # ---------- Estilos ----------
+            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+            from openpyxl.drawing.image import Image as XLImage
 
-        align_left = Alignment(horizontal="left", vertical="center")
-        align_center = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        align_wrap_left = Alignment(horizontal="left", vertical="top", wrap_text=True)
+            bold_16 = Font(bold=True, size=16)
+            bold_12 = Font(bold=True, size=12)
+            bold_11 = Font(bold=True, size=11)
+            normal_10 = Font(size=10)
 
-        fill_header = PatternFill("solid", fgColor="E9ECEF")   # gris suave
-        fill_zebra = PatternFill("solid", fgColor="F7F7F7")    # zebra gris más claro
+            align_left = Alignment(horizontal="left", vertical="center")
+            align_center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            align_wrap_left = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
-        thin = Side(style="thin", color="BFBFBF")
-        border_thin = Border(left=thin, right=thin, top=thin, bottom=thin)
+            fill_header = PatternFill("solid", fgColor="E9ECEF")   # gris suave
+            fill_zebra = PatternFill("solid", fgColor="F7F7F7")    # zebra gris más claro
 
-        # ---------- Logo ----------
-        logo_path = self._get_logo_local_path()  # usa el mismo helper
-        # Layout: logo en A1, texto en B1...
-        text_col = "B"
+            thin = Side(style="thin", color="BFBFBF")
+            border_thin = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-        # Espacio de header (filas 1-5)
-        ws.row_dimensions[1].height = 45
-        ws.row_dimensions[2].height = 22
-        ws.row_dimensions[3].height = 18
-        ws.row_dimensions[4].height = 18
-        ws.row_dimensions[5].height = 10
+            # ---------- Logo ----------
+            logo_path = self._get_logo_local_path()  # usa el mismo helper
+            # Layout: logo en A1, texto en B1...
+            text_col = "B"
 
-        if logo_path:
-            try:
-                from PIL import Image as PILImage
+            # Espacio de header (filas 1-5)
+            ws.row_dimensions[1].height = 45
+            ws.row_dimensions[2].height = 22
+            ws.row_dimensions[3].height = 18
+            ws.row_dimensions[4].height = 18
+            ws.row_dimensions[5].height = 10
 
-                # Abrimos imagen para conocer tamaño real
-                pil_img = PILImage.open(logo_path)
-                orig_width, orig_height = pil_img.size
+            if logo_path:
+                try:
+                    from PIL import Image as PILImage
 
-                img = XLImage(logo_path)
+                    # Abrimos imagen para conocer tamaño real
+                    pil_img = PILImage.open(logo_path)
+                    orig_width, orig_height = pil_img.size
 
-                # Altura deseada en px
-                desired_height = 80
+                    img = XLImage(logo_path)
 
-                # Mantener proporción
-                ratio = orig_width / orig_height
-                img.height = desired_height
-                img.width = desired_height * ratio
+                    # Altura deseada en px
+                    desired_height = 80
 
-                ws.add_image(img, "A1")
+                    # Mantener proporción
+                    ratio = orig_width / orig_height
+                    img.height = desired_height
+                    img.width = desired_height * ratio
 
-                # Ajustar ancho columna A según logo
-                ws.column_dimensions["A"].width = 14
+                    ws.add_image(img, "A1")
 
-            except Exception:
-                ws.column_dimensions["A"].width = 4
+                    # Ajustar ancho columna A según logo
+                    ws.column_dimensions["A"].width = 14
 
-        # ---------- Header texto ----------
-        ws[f"{text_col}1"] = empresa
-        ws[f"{text_col}1"].font = bold_16
-        ws[f"{text_col}1"].alignment = align_left
+                except Exception:
+                    ws.column_dimensions["A"].width = 4
 
-        ws[f"{text_col}2"] = reporte
-        ws[f"{text_col}2"].font = bold_12
-        ws[f"{text_col}2"].alignment = align_left
+            # ---------- Header texto ----------
+            ws[f"{text_col}1"] = empresa
+            ws[f"{text_col}1"].font = bold_16
+            ws[f"{text_col}1"].alignment = align_left
 
-        ws[f"{text_col}3"] = f"Usuario: {usuario}"
-        ws[f"{text_col}3"].font = normal_10
-        ws[f"{text_col}3"].alignment = align_left
+            ws[f"{text_col}2"] = reporte
+            ws[f"{text_col}2"].font = bold_12
+            ws[f"{text_col}2"].alignment = align_left
 
-        ws[f"{text_col}4"] = f"Fecha y hora: {ahora}"
-        ws[f"{text_col}4"].font = normal_10
-        ws[f"{text_col}4"].alignment = align_left
+            ws[f"{text_col}3"] = f"Usuario: {usuario}"
+            ws[f"{text_col}3"].font = normal_10
+            ws[f"{text_col}3"].alignment = align_left
 
-        # Línea visual separadora (fila 5)
-        max_cols = len(headers)
-        if max_cols < 1:
-            max_cols = 1
-        # une B5 hasta última columna del reporte para "subrayar"
-        from openpyxl.utils import get_column_letter
-        last_col_letter = get_column_letter(max_cols + 1)  # +1 porque empezamos tabla en col 1, pero header texto en B
-        ws.merge_cells(f"{text_col}5:{last_col_letter}5")
-        ws[f"{text_col}5"] = ""
-        ws[f"{text_col}5"].border = Border(bottom=thin)
+            ws[f"{text_col}4"] = f"Fecha y hora: {ahora}"
+            ws[f"{text_col}4"].font = normal_10
+            ws[f"{text_col}4"].alignment = align_left
 
-        # ---------- Tabla ----------
-        start_row = 6
-        start_col = 1  # A
+            # Línea visual separadora (fila 5)
+            max_cols = len(headers)
+            if max_cols < 1:
+                max_cols = 1
+            # une B5 hasta última columna del reporte para "subrayar"
+            from openpyxl.utils import get_column_letter
+            last_col_letter = get_column_letter(max_cols + 1)  # +1 porque empezamos tabla en col 1, pero header texto en B
+            ws.merge_cells(f"{text_col}5:{last_col_letter}5")
+            ws[f"{text_col}5"] = ""
+            ws[f"{text_col}5"].border = Border(bottom=thin)
 
-        # Encabezados de la tabla
-        for idx, h in enumerate(headers, start=start_col):
-            cell = ws.cell(row=start_row, column=idx, value=h)
-            cell.font = bold_11
-            cell.alignment = align_center
-            cell.fill = fill_header
-            cell.border = border_thin
+            # ---------- Tabla ----------
+            start_row = 6
+            start_col = 1  # A
 
-        # Filas de datos
-        row = start_row + 1
-        for row_idx, obj in enumerate(qs):
-            values = self.get_export_row(obj, columns)
-
-            zebra = (row_idx % 2 == 0)  # intercalado como en PDF (0 gris, 1 blanco)
-            for col_idx, val in enumerate(values, start=start_col):
-                cell = ws.cell(row=row, column=col_idx, value=val)
-                cell.font = normal_10
-                cell.alignment = align_wrap_left
+            # Encabezados de la tabla
+            for idx, h in enumerate(headers, start=start_col):
+                cell = ws.cell(row=start_row, column=idx, value=h)
+                cell.font = bold_11
+                cell.alignment = align_center
+                cell.fill = fill_header
                 cell.border = border_thin
-                if zebra:
-                    cell.fill = fill_zebra
-            row += 1
 
-        end_row = row - 1
-        end_col = start_col + len(headers) - 1
+            # Filas de datos
+            row = start_row + 1
+            for row_idx, obj in enumerate(qs):
+                values = self.get_export_row(obj, columns)
 
-        # Ajuste de anchos por contenido (con límites para que no se dispare)
-        max_width = 35
-        min_width = 12
+                zebra = (row_idx % 2 == 0)  # intercalado como en PDF (0 gris, 1 blanco)
+                for col_idx, val in enumerate(values, start=start_col):
+                    cell = ws.cell(row=row, column=col_idx, value=val)
+                    cell.font = normal_10
+                    cell.alignment = align_wrap_left
+                    cell.border = border_thin
+                    if zebra:
+                        cell.fill = fill_zebra
+                row += 1
 
-        for col_idx in range(start_col, start_col + len(headers)):
-            col_letter = get_column_letter(col_idx)
-            max_len = 0
+            end_row = row - 1
+            end_col = start_col + len(headers) - 1
 
-            # medir header + celdas (limitado)
-            header_val = ws.cell(row=start_row, column=col_idx).value
-            if header_val:
-                max_len = max(max_len, len(str(header_val)))
+            # Ajuste de anchos por contenido (con límites para que no se dispare)
+            max_width = 35
+            min_width = 12
 
-            for r in range(start_row + 1, end_row + 1):
-                v = ws.cell(row=r, column=col_idx).value
-                if v is None:
-                    continue
-                max_len = max(max_len, len(str(v)))
+            for col_idx in range(start_col, start_col + len(headers)):
+                col_letter = get_column_letter(col_idx)
+                max_len = 0
 
-            # factor simple para que se vea bien
-            width = max(min_width, min(max_width, max_len + 2))
-            ws.column_dimensions[col_letter].width = width
+                # medir header + celdas (limitado)
+                header_val = ws.cell(row=start_row, column=col_idx).value
+                if header_val:
+                    max_len = max(max_len, len(str(header_val)))
 
-        # Congelar encabezado de tabla (para que siempre se vea)
-        ws.freeze_panes = ws["A7"]  # fila después de headers
+                for r in range(start_row + 1, end_row + 1):
+                    v = ws.cell(row=r, column=col_idx).value
+                    if v is None:
+                        continue
+                    max_len = max(max_len, len(str(v)))
 
-        # ---------- Respuesta ----------
-        response = HttpResponse(
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        filename_base = getattr(self, "export_filename_base", "reporte")
-        filename = f"{filename_base}_reporte.xlsx"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                # factor simple para que se vea bien
+                width = max(min_width, min(max_width, max_len + 2))
+                ws.column_dimensions[col_letter].width = width
 
-                # ---------------------------
-        # Formato de tabla (bordes + encabezado + zebra)
-        # ---------------------------
-        thin = Side(style="thin")
-        border_all = Border(left=thin, right=thin, top=thin, bottom=thin)
+            # Congelar encabezado de tabla (para que siempre se vea)
+            ws.freeze_panes = ws["A7"]  # fila después de headers
 
-        header_fill = PatternFill("solid", fgColor="D9D9D9")   # gris claro
-        zebra_fill = PatternFill("solid", fgColor="F2F2F2")    # gris más suave
-
-        header_font = Font(bold=True)
-        header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell_align = Alignment(vertical="top", wrap_text=True)
-
-        # Rango de tabla
-        last_row = row - 1                      # 'row' ya quedó apuntando a la siguiente fila libre
-        first_col = 1
-        last_col = len(headers)
-
-        # Encabezados (fila start_row)
-                # Encabezados (fila start_row)
-        for col in range(first_col, last_col + 1):
-            cell = ws.cell(row=start_row, column=col)
-
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = header_align
-
-            # Forzar borde inferior visible
-            cell.border = Border(
-                left=thin,
-                right=thin,
-                top=thin,
-                bottom=Side(style="medium")  # más grueso para que destaque
+            # ---------- Respuesta ----------
+            response = HttpResponse(
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+            filename_base = getattr(self, "export_filename_base", "reporte")
+            filename = f"{filename_base}_reporte.xlsx"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
-        # Datos (desde start_row+1 hasta last_row)
-        for r in range(start_row + 1, last_row + 1):
-            # zebra: primera fila de datos gris, siguiente blanco, etc.
-            use_zebra = ((r - (start_row + 1)) % 2 == 0)
+                    # ---------------------------
+            # Formato de tabla (bordes + encabezado + zebra)
+            # ---------------------------
+            thin = Side(style="thin")
+            border_all = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-            for ccol in range(first_col, last_col + 1):
-                cell = ws.cell(row=r, column=ccol)
-                cell.border = border_all
-                cell.alignment = cell_align
-                if use_zebra:
-                    cell.fill = zebra_fill
+            header_fill = PatternFill("solid", fgColor="D9D9D9")   # gris claro
+            zebra_fill = PatternFill("solid", fgColor="F2F2F2")    # gris más suave
 
-        # Ajuste de altura del header para que se vea mejor
-        ws.row_dimensions[start_row].height = 20
+            header_font = Font(bold=True)
+            header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell_align = Alignment(vertical="top", wrap_text=True)
 
-        wb.save(response)
-        return response
+            # Rango de tabla
+            last_row = row - 1                      # 'row' ya quedó apuntando a la siguiente fila libre
+            first_col = 1
+            last_col = len(headers)
+
+            # Encabezados (fila start_row)
+                    # Encabezados (fila start_row)
+            for col in range(first_col, last_col + 1):
+                cell = ws.cell(row=start_row, column=col)
+
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_align
+
+                # Forzar borde inferior visible
+                cell.border = Border(
+                    left=thin,
+                    right=thin,
+                    top=thin,
+                    bottom=Side(style="medium")  # más grueso para que destaque
+                )
+
+            # Datos (desde start_row+1 hasta last_row)
+            for r in range(start_row + 1, last_row + 1):
+                # zebra: primera fila de datos gris, siguiente blanco, etc.
+                use_zebra = ((r - (start_row + 1)) % 2 == 0)
+
+                for ccol in range(first_col, last_col + 1):
+                    cell = ws.cell(row=r, column=ccol)
+                    cell.border = border_all
+                    cell.alignment = cell_align
+                    if use_zebra:
+                        cell.fill = zebra_fill
+
+            # Ajuste de altura del header para que se vea mejor
+            ws.row_dimensions[start_row].height = 20
+
+            wb.save(response)
+            return response
+        except Exception as exc:
+            write_exception_log(
+                LogContext(
+                    modulo=self.model._meta.app_label,
+                    request=request,
+                ),
+                exc
+            )
+            messages.error(request, "Ocurrió un error al exportar el Excel.")
+            return HttpResponseRedirect(request.META.get("HTTP_REFERER", ".."))
 
 class PaginacionAdminMixin:
 

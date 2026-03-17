@@ -3,6 +3,8 @@ from django.db import models
 from Materiales.models import UnidadesMedida, Materiale
 from django.utils import timezone
 from django.db import transaction
+
+
 class CategoriasMueble(models.Model):
     id = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=100)  # Field name made lowercase.
@@ -20,6 +22,10 @@ class CategoriasMueble(models.Model):
         db_table = 'Categorias_Muebles'
         verbose_name = 'Categoría de Mueble'
         verbose_name_plural = 'Categorías de Muebles'
+        permissions = [
+            ("export_pdf_categoriasmueble", "Puede exportar Categorías de Muebles a PDF"),
+            ("export_excel_categoriasmueble", "Puede exportar Categorías de Muebles a Excel"),
+        ]
 
 class Mueble(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -86,6 +92,10 @@ class Mueble(models.Model):
         db_table = 'Muebles'
         verbose_name = 'Mueble'
         verbose_name_plural = 'Muebles'
+        permissions = [
+            ("export_pdf_mueble", "Puede exportar Muebles a PDF"),
+            ("export_excel_mueble", "Puede exportar Muebles a Excel"),
+        ]
 
 class Tamaño(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -100,6 +110,10 @@ class Tamaño(models.Model):
         db_table = 'Tamano'
         verbose_name = 'Tamaño'
         verbose_name_plural = 'Tamaños'
+        permissions = [
+            ("export_pdf_tamaño", "Puede exportar Tamaños a PDF"),
+            ("export_excel_tamaño", "Puede exportar Tamaños a Excel"),
+        ]
 
 
 class MuebleMateriale(models.Model):
@@ -117,6 +131,10 @@ class MuebleMateriale(models.Model):
         db_table = 'Mueble_Material'
         verbose_name = 'Mueble Material'
         verbose_name_plural = 'Muebles Materiales'
+        permissions = [
+            ("export_pdf_mueblemateriale", "Puede exportar Muebles Materiales a PDF"),
+            ("export_excel_mueblemateriale", "Puede exportar Muebles Materiales a Excel"),
+        ]
     
 
 
@@ -132,5 +150,9 @@ class HistorialPreciosMueble(models.Model):
         db_table = 'Historial_Precios_muebles'
         verbose_name = 'Historial de Precio de Mueble'
         verbose_name_plural = 'Historiales de Precios de Muebles'
+        permissions = [
+            ("export_pdf_historialpreciosmueble", "Puede exportar Historiales de Precios de Muebles a PDF"),
+            ("export_excel_historialpreciosmueble", "Puede exportar Historiales de Precios de Muebles a Excel"),
+        ]
 
     

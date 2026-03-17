@@ -155,12 +155,16 @@ class TamanoAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
         return super().delete_view(request, object_id, extra_context)
 
 @admin.register(MuebleMateriale)
-class MuebleMaterialAdmin(PaginacionAdminMixin, admin.ModelAdmin):
+class MuebleMaterialAdmin(ExportReportMixin,PaginacionAdminMixin, admin.ModelAdmin):
     form = MuebleMaterialeForm
     list_display = ("id_mueble", "id_material", "cantidad")
+    search_fields = ('id_mueble__nombre', 'id_material__nombre')
 
     export_report_name = "Reporte de Materiales de Muebles"
     export_filename_base = "Materiales_de_Muebles"
+
+    export_report_name = "Reporte de Muebles-Materiales"
+    export_filename_base = "Muebles-Materiales"
     
 
 class MuebleMaterialeInline(admin.TabularInline):
@@ -190,3 +194,26 @@ class MuebleAdmin(UniqueFieldAdminMixin,PaginacionAdminMixin, AdminConImagenMixi
     export_report_name = "Reporte de Muebles"
     export_filename_base = "muebles"
     export_exclude_fields = ("vista_previa",)
+
+#Nuevos admin para reportes
+
+@admin.register(HistorialPreciosMueble)
+class HistorialPreciosMuebleAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "id_mueble",
+        "precio",
+        "fecha_inicio",
+        "fecha_fin",
+    )
+    search_fields = (
+        "id_mueble__nombre",
+    )
+    list_filter = (
+        "fecha_inicio",
+        "fecha_fin",
+        "id_mueble",
+    )
+
+    export_report_name = "Reporte de Historial de Precios de Muebles"
+    export_filename_base = "Historial_Precios_Muebles"

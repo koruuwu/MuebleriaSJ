@@ -1258,3 +1258,76 @@ class ListaCompraAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin
             ),
         ]
         return custom + urls
+    
+#Nuevas vistas para exportar reportes de cada modelo
+    
+@admin.register(DetalleCotizaciones)
+class DetalleCotizacionesAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "id_cotizacion",
+        "id_mueble",
+        "cantidad",
+        "precio_unitario",
+        "subtotal",
+    )
+    search_fields = (
+        "id_cotizacion__id",
+        "id_mueble__nombre",
+        "id_cotizacion__cliente__nombre",
+    )
+    list_filter = ("id_cotizacion", "id_mueble")
+
+    export_report_name = "Reporte de Detalles de Cotizaciones"
+    export_filename_base = "DetalleCotizaciones"
+
+@admin.register(RequerimientoMateriale)
+class RequerimientoMaterialeAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "id_lista",
+        "material",
+        "proveedor",
+        "cantidad_necesaria",
+        "motivo",
+        "prioridad",
+        "precio_actual",
+        "subtotal",
+    )
+    search_fields = (
+        "id_lista__id",
+        "material__nombre",
+        "proveedor__compañia",
+    )
+    list_filter = ("motivo", "prioridad", "proveedor")
+
+    export_report_name = "Reporte de Requerimientos de Materiales"
+    export_filename_base = "RequerimientosMateriales"
+
+@admin.register(DetalleRecibido)
+class DetalleRecibidoAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "orden",
+        "product",
+        "cantidad_ord",
+        "cantidad_recibida",
+        "aporte",
+        "estado_item",
+    )
+    search_fields = (
+        "orden__id",
+        "product__nombre",
+    )
+    list_filter = ("estado_item",)
+
+    export_report_name = "Reporte de Detalles Recibidos"
+    export_filename_base = "DetallesRecibidos"
+
+@admin.register(Estados)
+class EstadosAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = ("id", "tipo")
+    search_fields = ("tipo",)
+
+    export_report_name = "Reporte de Estados"
+    export_filename_base = "Estados"

@@ -41,6 +41,7 @@ class MaterialeForm(ImagenForm):
             }
 
     def clean_stock_minimo(self):
+        1/0
         numero = self.cleaned_data.get('stock_minimo')
         numero = self.validar_longitud(str(numero), "Stock minimo", min_len=1, max_len=4)
         return numero
@@ -272,9 +273,74 @@ class ProveedoreAdmin(ExportReportMixin,PaginacionAdminMixin,admin.ModelAdmin):
 
         return super().delete_view(request, object_id, extra_context)
     
-   
-
-
-
-
     
+    
+#Nuevos admins para reportes
+@admin.register(MaterialProveedore)
+class MaterialProveedoreAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    form = MaterialProveedorForm
+    list_display = (
+        "id",
+        "material",
+        "id_proveedor",
+        "precio_actual",
+        "tiempo",
+        "unidad_tiempo",
+        "creado",
+    )
+    search_fields = (
+        "material__nombre",
+        "id_proveedor__compañia",
+        "id_proveedor__nombre",
+    )
+    list_filter = ("unidad_tiempo", "id_proveedor", "material")
+
+    export_report_name = "Reporte de Materiales por Proveedor"
+    export_filename_base = "Materiales_Proveedores"   
+
+@admin.register(HistorialPrecio)
+class HistorialPrecioAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "material",
+        "proveedor",
+        "precio",
+        "fecha_inicio",
+        "fecha_fin",
+    )
+    search_fields = (
+        "material__nombre",
+        "proveedor__compañia",
+    )
+    list_filter = ("fecha_inicio", "fecha_fin", "proveedor", "material")
+
+    export_report_name = "Reporte de Historial de Precios"
+    export_filename_base = "Historial_Precios"
+
+@admin.register(Calificacione)
+class CalificacioneAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    form = calificacionForm
+    list_display = (
+        "id",
+        "id_prov",
+        "criterio",
+        "calificacion",
+        "comentario",
+    )
+    search_fields = (
+        "id_prov__compañia",
+        "comentario",
+        "criterio",
+    )
+    list_filter = ("criterio", "calificacion", "id_prov")
+
+    export_report_name = "Reporte de Calificaciones de Proveedores"
+    export_filename_base = "Calificaciones_Proveedores"
+
+@admin.register(EstadosPersonas)
+class EstadosPersonasAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
+    list_display = ("id", "tipo")
+    search_fields = ("tipo",)
+
+    export_report_name = "Reporte de Estados de Personas"
+    export_filename_base = "Estados_Personas"

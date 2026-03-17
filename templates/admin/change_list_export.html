@@ -3,24 +3,27 @@
 
 {% block extrahead %}
     {{ block.super }}
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 {% endblock %}
 
 {% block object-tools-items %}
   <div style="display:inline-flex; gap: 8px; margin-right: 8px;">
 
-    <a href="{% url cl.opts|admin_urlname:'export_pdf' %}?{{ request.GET.urlencode }}"
-       class="button btn btn-info">
-       <i class="bi bi-file-earmark-pdf-fill"></i>
-       Exportar PDF
-    </a>
+    {% if can_export_pdf %}
+      <a href="{% url cl.opts|admin_urlname:'export_pdf' %}?{{ request.GET.urlencode }}"
+         class="button btn btn-info">
+         <i class="bi bi-file-earmark-pdf-fill"></i>
+         Exportar PDF
+      </a>
+    {% endif %}
 
-    <a href="{% url cl.opts|admin_urlname:'export_excel' %}?{{ request.GET.urlencode }}"
-       class="button btn btn-info">
-       <i class="bi bi-file-earmark-excel-fill"></i>
-       Exportar Excel
-    </a>
+    {% if can_export_excel %}
+      <a href="{% url cl.opts|admin_urlname:'export_excel' %}?{{ request.GET.urlencode }}"
+         class="button btn btn-info">
+         <i class="bi bi-file-earmark-excel-fill"></i>
+         Exportar Excel
+      </a>
+    {% endif %}
 
   </div>
 

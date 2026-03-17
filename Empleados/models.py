@@ -22,6 +22,10 @@ class User(models.Model):
     class Meta:
         managed = True
         db_table = 'user'
+        permissions = [
+            ("export_pdf_user", "Puede exportar Usuarios a PDF"),
+            ("export_excel_user", "Puede exportar Usuarios a Excel"),
+        ]
 
 
 class Empleado(models.Model):
@@ -43,9 +47,13 @@ class Empleado(models.Model):
         db_table = 'Empleados'
         verbose_name = 'Empleado'
         verbose_name_plural = 'Empleados'
+        permissions = [
+            ("export_pdf_empleado", "Puede exportar Empleados a PDF"),
+            ("export_excel_empleado", "Puede exportar Empleados a Excel"),
+        ]
 
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from django.db import models
 from Sucursales.models import Sucursale, Caja
 from django.db.models.signals import post_save
@@ -60,11 +68,32 @@ class PerfilUsuario(models.Model):
     class Meta:
         managed = True
         db_table = 'PerfilUsuario'
+        verbose_name = 'Perfil de Usuario'
+        verbose_name_plural = 'Perfiles de Usuarios'
+        permissions = [
+            ("export_pdf_perfilusuario", "Puede exportar Perfiles de Usuario a PDF"),
+            ("export_excel_perfilusuario", "Puede exportar Perfiles de Usuario a Excel"),
+        ]
 
     def __str__(self):
         return f"Perfil de {self.user.username}"
     
-    @receiver(post_save, sender=User)
-    def crear_perfil_usuario(sender, instance, created, **kwargs):
-        if created:
-            PerfilUsuario.objects.create(user=instance)
+class GroupProxy(Group):
+    class Meta:
+        proxy = True
+        verbose_name = "Grupo"
+        verbose_name_plural = "Grupos"
+        permissions = [
+            ("export_pdf_groupproxy", "Puede exportar Grupos a PDF"),
+            ("export_excel_groupproxy", "Puede exportar Grupos a Excel"),
+        ]
+
+class UserProxy(User):
+    class Meta:
+        proxy = True
+        verbose_name = "Usuario"
+        verbose_name_plural = "Usuarios"
+        permissions = [
+            ("export_pdf_userproxy", "Puede exportar Usuarios a PDF"),
+            ("export_excel_userproxy", "Puede exportar Usuarios a Excel"),
+        ]
