@@ -24,7 +24,7 @@ if not DEBUG:
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='127.0.0.1,localhost'
+    default='127.0.0.1,localhost,muebleria-sanjose-gwab.onrender.com'
 ).split(',')
 
 # settings.py
@@ -32,7 +32,7 @@ import sys
 
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='http://127.0.0.1,http://localhost'
+    default='http://127.0.0.1,http://localhost,https://muebleria-sanjose-gwab.onrender.com'
 ).split(',')
 
 if 'test' in sys.argv:
