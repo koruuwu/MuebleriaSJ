@@ -237,3 +237,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if DEBUG:#importante para los iframes
     X_FRAME_OPTIONS = 'ALLOWALL'
+
+
+#Julio Torres 2023110204
