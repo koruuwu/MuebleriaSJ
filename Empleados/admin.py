@@ -142,7 +142,7 @@ class UsuarioChangeForm(UserChangeForm):
     
 @admin.register(GroupProxy)
 class GroupAdmin(ExportReportMixin, PaginacionAdminMixin, admin.ModelAdmin):
-    list_display = ("name",)
+    list_display = ("id", "name")
     search_fields = ("name",)
     filter_horizontal = ("permissions",)
 

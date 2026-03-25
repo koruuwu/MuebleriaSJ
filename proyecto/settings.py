@@ -15,11 +15,25 @@ EXCEPTION_LOG_DIR = Path(BASE_DIR) / "exception_logs"
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = 'django-insecure-rog-af+&wv-4hgeofrrhb7*(u^r5g03y78e367=mnf107r_8+='
 
-DEBUG = True
-ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
+DEBUG = False
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='127.0.0.1,localhost'
+).split(',')
 
 # settings.py
 import sys
+
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://127.0.0.1,http://localhost'
+).split(',')
 
 if 'test' in sys.argv:
     MIGRATION_MODULES = {
@@ -121,6 +135,7 @@ JAZZMIN_SETTINGS = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     "proyecto.utils.middleware.AdminExceptionLoggingMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',  # Este debe estar aquí
@@ -214,6 +229,8 @@ STATICFILES_DIRS = [
 ]
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 # Default primary key field type
